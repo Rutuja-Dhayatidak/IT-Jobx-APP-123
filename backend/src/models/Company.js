@@ -9,7 +9,7 @@ const companySchema = new mongoose.Schema({
   company_size: { type: String },
   website_url: { type: String },
   about_company: { type: String },
-  status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
+  status: { type: String, enum: ['pending', 'approved', 'rejected', 'resubmitted', 'banned'], default: 'pending' },
   rejectionReason: { type: String },
   isVerified: { type: Boolean, default: false },
   isBlocked: { type: Boolean, default: false },
@@ -28,7 +28,7 @@ const companySchema = new mongoose.Schema({
   // Trust and security metrics
   trust_score: { type: Number, default: 0 },
   risk_level: { type: String, enum: ['Low', 'Medium', 'High', 'Critical'], default: 'Low' },
-  verification_status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
+  verification_status: { type: String, enum: ['pending', 'approved', 'rejected', 'resubmitted'], default: 'pending' },
 
   // Individual verification flags
   email_verified: { type: Boolean, default: false },
@@ -49,7 +49,7 @@ const companySchema = new mongoose.Schema({
   otp_rate_limit_reset: { type: Date },
   
   // Trust & Safety Verification Fields
-  trust_safety_status: { type: String, enum: ['pending', 'cleared', 'approved', 'rejected', 'escalated', 'flagged'], default: 'pending' },
+  trust_safety_status: { type: String, enum: ['pending', 'cleared', 'approved', 'rejected', 'escalated', 'flagged', 'banned'], default: 'pending' },
   moderator_status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
   is_escalated: { type: Boolean, default: false },
   escalation_reason: { type: String },
@@ -67,6 +67,33 @@ const companySchema = new mongoose.Schema({
     google_presence: { type: Boolean, default: null },
     no_duplicates: { type: Boolean, default: null },
     logo_verified: { type: Boolean, default: null }
+  },
+
+  // Plan integration fields
+  plan_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Plan', default: null },
+  plan_type: { type: String, enum: ["free", "basic", "pro", "enterprise"], default: "free" },
+  plan_started_at: { type: Date, default: null },
+  plan_expires_at: { type: Date, default: null },
+  plan_status: { type: String, enum: ["active", "inactive", "expired"], default: "inactive" },
+  
+  // 🏢 Enterprise Activation Fields
+  account_manager: { type: mongoose.Schema.Types.ObjectId, ref: 'Candidate' },
+  activated_by: { type: mongoose.Schema.Types.ObjectId, ref: 'Candidate' },
+  activated_at: { type: Date },
+  
+  // Granular Permissions
+  permissions: {
+    job_posts: { type: Number, default: 5 }, // -1 for unlimited
+    team_members: { type: Number, default: 2 },
+    applications: { type: Number, default: -1 },
+    analytics: { type: Boolean, default: false },
+    featured_jobs: { type: Boolean, default: false },
+    api_access: { type: Boolean, default: false },
+    custom_branding: { type: Boolean, default: false },
+    priority_support: { type: Boolean, default: false },
+    sso_login: { type: Boolean, default: false },
+    data_migration: { type: Boolean, default: false },
+    dedicated_manager: { type: Boolean, default: false }
   }
 }, { timestamps: true });
 

@@ -27,6 +27,7 @@ interface HomeProps {
   onProfilePress?: () => void;
   onNavigateToTab?: (tab: 'home' | 'portfolio' | 'saved' | 'chat' | 'profile') => void;
   isDarkTheme?: boolean;
+  userLocation?: string;
 }
 
 export default function Home({
@@ -38,6 +39,7 @@ export default function Home({
   onProfilePress,
   onNavigateToTab,
   isDarkTheme = true,
+  userLocation,
 }: HomeProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
@@ -163,7 +165,7 @@ export default function Home({
               <View style={styles.locationTextContainer}>
                 <Text style={styles.locationLabel}>Location</Text>
                 <View style={styles.locationValueRow}>
-                  <Text style={styles.locationValue}>New York, USA</Text>
+                  <Text style={styles.locationValue}>{userLocation || 'New York, USA'}</Text>
                   <Text style={styles.arrowDown}>⏷</Text>
                 </View>
               </View>

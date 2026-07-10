@@ -81,6 +81,10 @@ function App() {
   const [isDarkTheme, setIsDarkTheme] = useState(false);
   const [selectedJob, setSelectedJob] = useState<any>(null);
   const [findJobInitialTab, setFindJobInitialTab] = useState<'available' | 'saved' | 'hire'>('available');
+  const [authToken, setAuthToken] = useState<string | null>(null);
+  const [user, setUser] = useState<any>(null);
+  const [otpType, setOtpType] = useState<'register' | 'forgot_password'>('register');
+  const [userLocation, setUserLocation] = useState('New York, USA');
 
   // Navigate to a new screen and add to history stack
   const navigateTo = (screen: ScreenName) => {
@@ -129,7 +133,11 @@ function App() {
         <Login
           onRegisterPress={() => navigateTo('register')}
           onBackPress={() => goBack()}
-          onLoginSuccess={() => navigateTo('profile')}
+          onLoginSuccess={(token, loggedUser) => {
+            setAuthToken(token);
+            setUser(loggedUser);
+            navigateTo('location');
+          }}
           onForgotPasswordPress={() => navigateTo('forgot_password')}
         />
       )}
@@ -137,7 +145,11 @@ function App() {
         <Register
           onLoginPress={() => navigateTo('login')}
           onBackPress={() => goBack()}
-          onRegisterSuccess={() => console.log('Registration successful!')}
+          onRegisterSuccess={(email) => {
+            setResetEmail(email);
+            setOtpType('register');
+            navigateTo('otp_verification');
+          }}
         />
       )}
       {currentScreen === 'forgot_password' && (
@@ -145,6 +157,7 @@ function App() {
           onBackPress={() => goBack()}
           onSendPress={(email) => {
             setResetEmail(email);
+            setOtpType('forgot_password');
             navigateTo('otp_verification');
           }}
         />
@@ -153,9 +166,13 @@ function App() {
         <OTPVerification
           email={resetEmail}
           onBackPress={() => goBack()}
-          onVerifyPress={(otp) => {
-            console.log('OTP verified:', otp);
-            navigateTo('reset_password');
+          onVerifyPress={(token) => {
+            if (otpType === 'register') {
+              setAuthToken(token);
+              navigateTo('profile');
+            } else {
+              navigateTo('reset_password');
+            }
           }}
         />
       )}
@@ -181,6 +198,7 @@ function App() {
         <Location
           onFinish={(location) => {
             console.log('Selected location:', location);
+            setUserLocation(location);
             navigateTo('home');
           }}
           onBackPress={() => goBack()}
@@ -189,6 +207,7 @@ function App() {
       {currentScreen === 'home' && (
         <Home
           isDarkTheme={isDarkTheme}
+          userLocation={userLocation}
           onProfilePress={() => navigateTo('myprofile')}
           onNotificationPress={() => navigateTo('notification')}
           onFilterPress={() => navigateTo('filter')}

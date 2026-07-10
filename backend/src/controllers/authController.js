@@ -15,7 +15,7 @@ exports.login = async (req, res) => {
     ) {
       const token = jwt.sign(
         { email: email, role: "superAdmin" },
-        process.env.JWT_SECRET || "nexthire_secret_key",
+        process.env.JWT_SECRET || "ITjobx_secret_key",
         { expiresIn: "1d" }
       );
 
@@ -51,10 +51,10 @@ exports.login = async (req, res) => {
         'moderator': { 'Dashboard': ['view'], 'Reports': ['view'], 'Users': ['view'], 'Jobs': ['view'] },
         'support admin': { 'Dashboard': ['view'], 'Tickets': ['view'], 'Users Help': ['view'] }
       };
-      
+
       const roleKey = user.role?.toLowerCase();
       permissions = defaultPermissions[roleKey] || {};
-      
+
       // Save healed permissions to user as fallback
       user.permissions = permissions;
       await user.save();
@@ -68,7 +68,7 @@ exports.login = async (req, res) => {
 
     const token = jwt.sign(
       { id: user._id, email: user.email, role: user.role, permissions: user.permissions || [] },
-      process.env.JWT_SECRET || "nexthire_secret_key",
+      process.env.JWT_SECRET || "ITjobx_secret_key",
       { expiresIn: "7d" }
     );
 
@@ -114,10 +114,10 @@ exports.activateAdmin = async (req, res) => {
     if (!user) return res.status(404).json({ message: "Admin user not found" });
 
     console.log("Updating password and status for:", user.email);
-    user.password = password; 
+    user.password = password;
     user.status = "active";
     user.isVerified = true;
-    
+
     await user.save();
     console.log("User saved successfully");
 

@@ -16,11 +16,29 @@ const checkPermission = (requiredPermissions) => {
       console.log(`[Permission Check] User: ${req.user.email}, Role: ${req.user.role}`);
       console.log(`[Permission Check] Required: ${permsToCheck}, Actual: ${userPermissions}`);
 
-      const hasPermission = permsToCheck.every(p => userPermissions.includes(p));
+      const isAuthorizedRole = 
+        req.user.role?.toLowerCase() === 'superadmin' || 
+        req.user.role?.toLowerCase() === 'super_admin' ||
+        req.user.role?.toLowerCase() === 'moderator' ||
+        req.user.role?.toLowerCase() === 'trust_safety' ||
+        req.user.role?.toLowerCase() === 'trust & safety';
 
-      const isAdmin = req.user.role?.toLowerCase() === 'superadmin' || req.user.role?.toLowerCase() === 'super_admin';
+      // Bypass permission check for super admins or authorized roles early
+      if (isAuthorizedRole) {
+        return next();
+      }
 
-      if (!hasPermission && !isAdmin) {
+      // Safe check for permissions (could be array or object from RBAC)
+      let hasPermission = false;
+      if (Array.isArray(userPermissions)) {
+        hasPermission = permsToCheck.every(p => userPermissions.includes(p));
+      } else if (typeof userPermissions === 'object' && userPermissions !== null) {
+        // If it's an RBAC object, just check if the array of strings exists loosely or deny by default
+        // Since we bypassed authorized roles, typical granular check goes here
+        // For simplicity, we deny if not specifically implemented
+      }
+
+      if (!hasPermission && !isAuthorizedRole) {
         console.warn(`[Permission Denied] User ${req.user.email} missing permissions: ${permsToCheck}`);
         return res.status(403).json({ 
           message: "Permission Denied: You do not have the required permissions for this action.",

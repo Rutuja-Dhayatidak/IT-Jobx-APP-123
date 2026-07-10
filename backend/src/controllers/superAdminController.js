@@ -45,7 +45,8 @@ exports.createAdmin = async (req, res) => {
       'Trust & Safety': ['VIEW_REPORTS', 'REVIEW_REPORT', 'BAN_USER', 'WARN_USER', 'APPROVE_JOB', 'REJECT_JOB'],
       'Platform Admin': ['VIEW_USERS', 'VIEW_JOBS', 'VERIFY_COMPANY'],
       'Ops Admin': ['VIEW_USERS', 'VIEW_JOBS', 'VIEW_REPORTS'],
-      'Support Admin': ['VIEW_TICKETS', 'RESOLVE_TICKET']
+      'Support Admin': ['VIEW_TICKETS', 'RESOLVE_TICKET'],
+      'Sales Panel': ['VIEW_LEADS', 'MANAGE_SALES', 'VIEW_ANALYTICS']
     };
 
     // Create pending user
@@ -195,7 +196,22 @@ exports.getCompanies = async (req, res) => {
 
 exports.verifyCompany = async (req, res) => {
   try {
-    const company = await Company.findByIdAndUpdate(req.params.id, { isVerified: true }, { new: true });
+    const company = await Company.findById(req.params.id);
+    if (!company) return res.status(404).json({ message: "Company not found" });
+
+    company.isVerified = true;
+    company.status = "approved";
+    company.verification_status = "approved";
+    await company.save();
+
+    if (company.owner_user_id) {
+      await Candidate.findByIdAndUpdate(company.owner_user_id, {
+        role: "employer",
+        is_employer: true,
+        current_mode: 'employer'
+      });
+    }
+
     res.json({ message: "Company verified", company });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -204,8 +220,15 @@ exports.verifyCompany = async (req, res) => {
 
 exports.getJobs = async (req, res) => {
   try {
-    const jobs = await Job.find().populate("company", "name").sort("-createdAt");
-    res.json(jobs);
+    const jobs = await Job.find().populate("companyId", "name").sort("-createdAt").lean();
+    
+    // Map companyId to company for frontend compatibility
+    const mappedJobs = jobs.map(job => ({
+      ...job,
+      company: job.companyId
+    }));
+
+    res.json(mappedJobs);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

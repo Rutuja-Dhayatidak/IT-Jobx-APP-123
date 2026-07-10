@@ -1,0 +1,9 @@
+node_modules
+npm-debug.log*
+.env
+.git
+uploads
+scratch
+test_*.js
+test_*.pdf
+test_output.txt

@@ -12,8 +12,13 @@ exports.registerCandidate = async (req, res) => {
 exports.verifyOtp = async (req, res) => {
   try {
     const { email, otp } = req.body;
-    const { token } = await candidateService.verifyOtp(email, otp);
-    res.json({ message: "Registration successful", token });
+    const { user, token } = await candidateService.verifyOtp(email, otp);
+    res.json({
+      message: "Registration successful",
+      token,
+      role: user.role,
+      user: { _id: user._id, email: user.email }
+    });
   } catch (err) {
     const statusCode = err.message === "User not found" ? 404 : 400;
     res.status(statusCode).json({ message: err.message });

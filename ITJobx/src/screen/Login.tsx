@@ -10,14 +10,17 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import FadeInView from '../components/FadeInView';
+import { authService } from '../services/authService';
 
 interface LoginProps {
   onRegisterPress: () => void;
   onBackPress?: () => void;
-  onLoginSuccess?: () => void;
+  onLoginSuccess?: (token: string, user: any) => void;
   onForgotPasswordPress: () => void;
 }
 
@@ -59,6 +62,27 @@ export default function Login({ onRegisterPress, onBackPress, onLoginSuccess, on
   const [password, setPassword] = useState('');
   const [secureText, setSecureText] = useState(true);
   const [rememberMe, setRememberMe] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = async () => {
+    if (!email.trim() || !password.trim()) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await authService.login(email.trim().toLowerCase(), password);
+      Alert.alert('Success', 'Logged in successfully!');
+      if (onLoginSuccess) {
+        onLoginSuccess(response.token, response.user);
+      }
+    } catch (error: any) {
+      Alert.alert('Login Failed', error.message || 'Invalid credentials');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -145,11 +169,16 @@ export default function Login({ onRegisterPress, onBackPress, onLoginSuccess, on
 
               {/* Log In Button */}
               <TouchableOpacity
-                style={styles.loginButton}
-                onPress={onLoginSuccess}
+                style={[styles.loginButton, loading && { opacity: 0.7 }]}
+                onPress={handleLogin}
+                disabled={loading}
                 activeOpacity={0.8}
               >
-                <Text style={styles.loginButtonText}>Log In</Text>
+                {loading ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <Text style={styles.loginButtonText}>Log In</Text>
+                )}
               </TouchableOpacity>
             </View>
 

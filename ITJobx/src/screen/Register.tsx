@@ -10,14 +10,17 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import FadeInView from '../components/FadeInView';
+import { authService } from '../services/authService';
 
 interface RegisterProps {
   onLoginPress: () => void;
   onBackPress?: () => void;
-  onRegisterSuccess?: () => void;
+  onRegisterSuccess?: (email: string) => void;
 }
 
 const GoogleIcon = () => (
@@ -59,6 +62,41 @@ export default function Register({ onLoginPress, onBackPress, onRegisterSuccess 
   const [password, setPassword] = useState('');
   const [secureText, setSecureText] = useState(true);
   const [agree, setAgree] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleSignUp = async () => {
+    if (!name.trim() || !email.trim() || !password.trim()) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+    if (!agree) {
+      Alert.alert('Error', 'You must agree to the Terms & Conditions');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const nameParts = name.trim().split(" ");
+      const firstName = nameParts[0] || "";
+      const lastName = nameParts.slice(1).join(" ") || "";
+      
+      await authService.register({
+        firstName,
+        lastName,
+        email: email.trim().toLowerCase(),
+        password,
+      });
+
+      Alert.alert('Success', 'OTP sent to your email.');
+      if (onRegisterSuccess) {
+        onRegisterSuccess(email.trim().toLowerCase());
+      }
+    } catch (error: any) {
+      Alert.alert('Registration Failed', error.message || 'Something went wrong');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -153,14 +191,18 @@ export default function Register({ onLoginPress, onBackPress, onRegisterSuccess 
               </TouchableOpacity>
             </View>
 
-            {/* Sign Up Button */}
+             {/* Sign Up Button */}
             <TouchableOpacity
-              style={[styles.signUpButton, !agree && styles.signUpButtonDisabled]}
-              onPress={onRegisterSuccess}
-              disabled={!agree}
+              style={[styles.signUpButton, (!agree || loading) && styles.signUpButtonDisabled]}
+              onPress={handleSignUp}
+              disabled={!agree || loading}
               activeOpacity={0.8}
             >
-              <Text style={styles.signUpButtonText}>Sign Up</Text>
+              {loading ? (
+                <ActivityIndicator color="#FFFFFF" size="small" />
+              ) : (
+                <Text style={styles.signUpButtonText}>Sign Up</Text>
+              )}
             </TouchableOpacity>
           </View>
 

@@ -294,3 +294,275 @@ exports.registerCompany = async (req, res) => {
     res.status(500).json({ success: false, message: "Server error during registration" });
   }
 };
+
+exports.resubmitCompany = async (req, res) => {
+  try {
+    const userId = req.user.id || req.user._id;
+    const user = await Candidate.findById(userId);
+    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+
+    // Find user's existing company
+    const company = await Company.findOne({ owner_user_id: userId });
+    if (!company) {
+      return res.status(404).json({ success: false, message: "No company registration request found to resubmit." });
+    }
+
+    const {
+      company_name,
+      industry,
+      company_size,
+      website_url,
+      about_company,
+      official_work_email,
+      contact_person_name,
+      mobile_number,
+      company_location,
+      gst_number,
+      cin_number,
+      pan_number
+    } = req.body;
+
+    // Optional logo file upload if provided
+    let logo = company.logo;
+    if (req.files && req.files.logo && req.files.logo[0]) {
+      logo = req.files.logo[0].path;
+    }
+
+    // Update basic details
+    company.name = company_name || company.name;
+    company.industry = industry || company.industry;
+    company.company_size = company_size || company.company_size;
+    company.website_url = website_url || company.website_url;
+    company.about_company = about_company || company.about_company;
+    if (official_work_email) {
+      company.official_work_email = official_work_email.toLowerCase().trim();
+    }
+    company.contact_person_name = contact_person_name || company.contact_person_name;
+    company.mobile_number = mobile_number || company.mobile_number;
+    company.company_location = company_location || company.company_location;
+    if (gst_number) company.gst_number = gst_number.toUpperCase().trim();
+    if (cin_number) company.cin_number = cin_number.toUpperCase().trim();
+    if (pan_number) company.pan_number = pan_number.toUpperCase().trim();
+
+    // Recalculate Trust Score
+    let score = 50;
+    if (company.gst_number) score += 20;
+    if (company.cin_number) score += 15;
+    if (company.pan_number) score += 15;
+    
+    let risk_level = 'Low';
+    if (score >= 80) risk_level = 'Low';
+    else if (score >= 60) risk_level = 'Medium';
+    else risk_level = 'High';
+
+    company.trust_score = score;
+    company.risk_level = risk_level;
+
+    // Update statuses to "resubmitted" as requested!
+    company.status = "resubmitted";
+    company.verification_status = "resubmitted";
+    company.trust_safety_status = "pending";
+    company.isVerified = false; // Reset verified flag
+    company.rejectionReason = undefined; // Clear previous rejection reason
+    
+    await company.save();
+
+    // --- HANDLE DOCUMENT UPLOADS ---
+    if (req.files) {
+      const docFields = [
+        { key: 'gst_cert', type: 'gst_cert' },
+        { key: 'pan_card', type: 'pan_card' },
+        { key: 'business_proof', type: 'business_proof' },
+        { key: 'company_proof', type: 'company_proof' }
+      ];
+
+      for (const field of docFields) {
+        if (req.files[field.key] && req.files[field.key][0]) {
+          const fileObj = req.files[field.key][0];
+          
+          // Delete old document of same type if exists or update
+          await CompanyDocument.deleteMany({ company_id: company._id, document_type: field.type });
+
+          await CompanyDocument.create({
+            company_id: company._id,
+            document_type: field.type,
+            document_url: fileObj.path || fileObj.secure_url,
+            uploaded_by: userId,
+            verification_status: 'pending'
+          });
+        }
+      }
+    }
+
+    // Save Rejection Log / History as "resubmitted"
+    const CompanyVerification = require('../models/CompanyVerification');
+    await CompanyVerification.create({
+      company_id: company._id,
+      status: 'resubmitted'
+    });
+
+    res.json({ success: true, message: "Company registration request resubmitted successfully!", company });
+  } catch (error) {
+    console.error("resubmitCompany Error:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.companyLogin = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ success: false, message: "Email and password are required" });
+    }
+
+    const bcrypt = require('bcryptjs');
+    const jwt = require('jsonwebtoken');
+    const CompanyTeamMember = require('../models/CompanyTeamMember');
+
+    let company = null;
+    let candidate = null;
+    let teamMember = null;
+
+    // 1. Try to find if this email is a primary Company Owner/Work Email
+    company = await Company.findOne({
+      $or: [
+        { email: email.toLowerCase() },
+        { official_work_email: email.toLowerCase() }
+      ]
+    });
+
+    if (company) {
+      // Find the associated user (Candidate) who is the owner
+      candidate = await Candidate.findById(company.owner_user_id);
+    } else {
+      // 2. If no direct Company owner, check if they are an invited team member!
+      teamMember = await CompanyTeamMember.findOne({
+        email: email.toLowerCase(),
+        status: { $ne: "removed" }
+      });
+
+      if (teamMember) {
+        if (teamMember.status === "pending") {
+          return res.status(403).json({
+            success: false,
+            message: "Your invitation is still pending. Please accept it via the link sent to your email to activate your account."
+          });
+        }
+        if (teamMember.status === "inactive") {
+          return res.status(403).json({
+            success: false,
+            message: "Your account has been deactivated. Please contact your administrator."
+          });
+        }
+        if (teamMember.status === "active") {
+          candidate = await Candidate.findById(teamMember.user_id);
+          if (candidate) {
+            company = await Company.findById(teamMember.company_id);
+          }
+        }
+      }
+    }
+
+    if (!company || !candidate) {
+      return res.status(404).json({
+        success: false,
+        message: "Employer or Company account not found"
+      });
+    }
+
+    // Compare password
+    const isMatch = await bcrypt.compare(password, candidate.password);
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid credentials"
+      });
+    }
+
+    // Check verification status of the company
+    const verificationStatus = (company.verification_status || company.status || 'pending').toLowerCase();
+
+    if (verificationStatus === "pending" || verificationStatus === "pending_review" || verificationStatus === "resubmitted") {
+      return res.status(200).json({
+        success: false,
+        status: "pending_review",
+        message: "Company verification is under review."
+      });
+    }
+
+    if (verificationStatus === "rejected") {
+      return res.status(200).json({
+        success: false,
+        status: "rejected",
+        rejectionReason: company.rejectionReason || "No specific reason provided.",
+        message: "Company verification was rejected."
+      });
+    }
+
+    // Ensure company is approved
+    if (verificationStatus !== "approved") {
+      return res.status(403).json({
+        success: false,
+        message: "Your company is not approved or has been suspended."
+      });
+    }
+
+    // Synchronize candidate fields to ensure no inconsistent states
+    if (candidate.role !== 'employer' || !candidate.is_employer || candidate.current_mode !== 'employer') {
+      candidate.role = 'employer';
+      candidate.is_employer = true;
+      candidate.current_mode = 'employer';
+      await candidate.save();
+    }
+
+    // Log the login timestamp for team members
+    if (teamMember) {
+      teamMember.last_login = new Date();
+      await teamMember.save();
+    }
+
+    // Generate JWT Token including team details if they are a team member
+    const payload = {
+      id: candidate._id,
+      email: candidate.email,
+      role: candidate.role,
+      name: `${candidate.firstName} ${candidate.lastName}`,
+    };
+
+    if (teamMember) {
+      payload.team_role = teamMember.role;
+      payload.permissions = teamMember.permissions;
+    } else {
+      // Primary owner acts as the master employer_admin with full permissions
+      payload.team_role = "employer_admin";
+      payload.permissions = [
+        "full_access",
+        "manage_team",
+        "manage_jobs",
+        "manage_billing",
+        "view_analytics",
+        "manage_company_profile"
+      ];
+    }
+
+    const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "7d" });
+
+    // Filter sensitive fields and return user representation
+    const userObj = candidate.toObject();
+    delete userObj.password;
+    userObj.team_role = payload.team_role;
+    userObj.permissions = payload.permissions;
+
+    res.status(200).json({
+      success: true,
+      token,
+      user: userObj,
+      company
+    });
+
+  } catch (error) {
+    console.error("companyLogin Error:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+

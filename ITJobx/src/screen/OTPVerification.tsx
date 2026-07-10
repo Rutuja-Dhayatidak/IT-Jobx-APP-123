@@ -11,21 +11,25 @@ import {
   Platform,
   ScrollView,
   Dimensions,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 
 import FadeInView from '../components/FadeInView';
+import { authService } from '../services/authService';
 
 const { width, height } = Dimensions.get('window');
 
 interface OTPVerificationProps {
   email: string;
   onBackPress: () => void;
-  onVerifyPress: (otp: string) => void;
+  onVerifyPress: (token: string) => void;
 }
 
 export default function OTPVerification({ email, onBackPress, onVerifyPress }: OTPVerificationProps) {
-  const [otp, setOtp] = useState(['', '', '', '']);
-  const [timer, setTimer] = useState(20);
+  const [otp, setOtp] = useState(['', '', '', '', '', '']);
+  const [timer, setTimer] = useState(60);
+  const [loading, setLoading] = useState(false);
   const inputsRef = useRef<Array<TextInput | null>>([]);
 
   useEffect(() => {
@@ -44,7 +48,7 @@ export default function OTPVerification({ email, onBackPress, onVerifyPress }: O
     newOtp[index] = cleanText;
     setOtp(newOtp);
 
-    if (cleanText && index < 3) {
+    if (cleanText && index < 5) {
       inputsRef.current[index + 1]?.focus();
     }
   };
@@ -57,14 +61,26 @@ export default function OTPVerification({ email, onBackPress, onVerifyPress }: O
 
   const handleResend = () => {
     if (timer === 0) {
-      setTimer(20);
+      setTimer(60);
+      Alert.alert('Info', 'Check your email for the OTP code.');
     }
   };
 
-  const handleVerify = () => {
+  const handleVerify = async () => {
     const otpCode = otp.join('');
-    if (otpCode.length === 4) {
-      onVerifyPress(otpCode);
+    if (otpCode.length === 6) {
+      setLoading(true);
+      try {
+        const response = await authService.verifyOtp(email, otpCode);
+        Alert.alert('Success', 'Verification successful!');
+        if (onVerifyPress) {
+          onVerifyPress(response.token);
+        }
+      } catch (error: any) {
+        Alert.alert('Verification Failed', error.message || 'Invalid or expired OTP');
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -138,12 +154,16 @@ export default function OTPVerification({ email, onBackPress, onVerifyPress }: O
 
           {/* Verify Button */}
           <TouchableOpacity
-            style={[styles.verifyButton, !isOtpComplete && styles.disabledButton]}
+            style={[styles.verifyButton, (!isOtpComplete || loading) && styles.disabledButton]}
             onPress={handleVerify}
             activeOpacity={0.8}
-            disabled={!isOtpComplete}
+            disabled={!isOtpComplete || loading}
           >
-            <Text style={styles.verifyButtonText}>Verify</Text>
+            {loading ? (
+              <ActivityIndicator color="#FFFFFF" size="small" />
+            ) : (
+              <Text style={styles.verifyButtonText}>Verify</Text>
+            )}
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>

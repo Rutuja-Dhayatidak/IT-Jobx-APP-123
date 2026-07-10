@@ -1,8 +1,8 @@
 const mongoose = require('mongoose');
-const Role = require('../src/models/Role'); 
+const Role = require('../src/models/Role');
 require('dotenv').config();
 
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/nexthire';
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/ITjobx';
 
 const addTrustRole = async () => {
   try {

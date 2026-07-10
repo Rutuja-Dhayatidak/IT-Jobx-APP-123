@@ -27,14 +27,14 @@ const getProfileByUserId = async (userId) => {
       select: "firstName lastName email phone company_id is_employer",
       populate: {
         path: "company_id",
-        select: "status name"
+        select: "status name verification_status rejectionReason official_work_email contact_person_name mobile_number company_location website_url about_company industry company_size gst_number cin_number pan_number logo"
       }
     });
   
   if (!profile) {
     const candidate = await Candidate.findById(userId)
       .select("firstName lastName email phone company_id is_employer")
-      .populate("company_id", "status name");
+      .populate("company_id", "status name verification_status rejectionReason official_work_email contact_person_name mobile_number company_location website_url about_company industry company_size gst_number cin_number pan_number logo");
     return {
       profile: { userId: candidate, userType: "fresher", skills: [], education: [], experience: [], projects: [] },
       completionPercentage: 0

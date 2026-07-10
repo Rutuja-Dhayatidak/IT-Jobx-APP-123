@@ -10,21 +10,27 @@ exports.uploadResume = async (req, res) => {
       return res.status(400).json({ message: "No file uploaded" });
     }
 
-    // 1. Upload to Cloudinary (Raw for non-image files)
-    const uploadToCloudinary = (buffer) => {
+    // 1. Upload to Cloudinary. Use auto detection so PDFs can open inline in the browser.
+    const uploadToCloudinary = (file) => {
       return new Promise((resolve, reject) => {
         const stream = cloudinary.uploader.upload_stream(
-          { resource_type: "raw", folder: "resumes" },
+          {
+            resource_type: "auto",
+            folder: "resumes",
+            use_filename: true,
+            unique_filename: true,
+            filename_override: file.originalname
+          },
           (error, result) => {
             if (result) resolve(result);
             else reject(error);
           }
         );
-        streamifier.createReadStream(buffer).pipe(stream);
+        streamifier.createReadStream(file.buffer).pipe(stream);
       });
     };
 
-    const cloudinaryRes = await uploadToCloudinary(req.file.buffer);
+    const cloudinaryRes = await uploadToCloudinary(req.file);
     const resumeUrl = cloudinaryRes.secure_url;
 
     // 2. Parse Resume Data

@@ -4,36 +4,25 @@ const financeController = require('../controllers/financeController');
 const verifyToken = require('../middleware/verifyToken');
 const isFinanceAdmin = require('../middleware/isFinanceAdmin');
 
+// All finance routes are protected
 router.use(verifyToken, isFinanceAdmin);
 
 // Dashboard
-router.get('/dashboard', financeController.getDashboardStats);
+router.get('/dashboard/stats', financeController.getFinanceStats);
 
-// Revenue Analytics
-router.get('/revenue', financeController.getRevenue);
-
-// Subscription Plans
-router.get('/plans', financeController.getPlans);
-router.post('/plans', financeController.createPlan);
-router.put('/plans/:id', financeController.updatePlan);
-router.delete('/plans/:id', financeController.deletePlan);
-
-// Employer Payments
-router.get('/payments', financeController.getPayments);
-
-// Pricing & Charges
-router.get('/pricing', financeController.getPricing);
-router.post('/pricing', financeController.updatePricing);
-
-// Refunds
-router.get('/refunds', financeController.getRefunds);
-router.post('/refund/approve', financeController.approveRefund);
-router.post('/refund/reject', financeController.rejectRefund);
+// Payments
+router.get('/payments/pending', financeController.getPendingPayments);
+router.get('/payments/verified', financeController.getVerifiedPayments);
+router.get('/payments/rejected', financeController.getRejectedPayments);
+router.post('/payments/:id/verify', financeController.verifyPayment);
+router.post('/payments/:id/reject', financeController.rejectPayment);
 
 // Invoices
-router.get('/invoices', financeController.getInvoices);
+router.get('/invoices', financeController.getAllInvoices);
+router.post('/invoices/generate', financeController.generateInvoice); // ✅ Confirming this POST route
 
 // Reports
-router.get('/reports', financeController.getReports);
+router.get('/revenue/monthly', financeController.getFinanceStats); 
+router.get('/gst/report', financeController.getGSTReport);
 
 module.exports = router;

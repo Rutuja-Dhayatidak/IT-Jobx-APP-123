@@ -27,6 +27,12 @@ router.put('/warn/:id', checkPermission('WARN_USER'), moderatorController.warnUs
 router.get('/jobs', checkPermission('VIEW_REPORTS'), moderatorController.getJobs);
 router.put('/job/:id/approve', checkPermission('APPROVE_JOB'), moderatorController.approveJob);
 router.put('/job/:id/reject', checkPermission('REJECT_JOB'), moderatorController.rejectJob);
+router.put('/job/:id/escalate', checkPermission('REJECT_JOB'), moderatorController.escalateJob);
+
+// T&S and Ops Routes
+router.put('/job/:id/ts-reject', checkPermission('REJECT_JOB'), moderatorController.tsRejectJob);
+router.put('/job/:id/ts-approve', checkPermission('APPROVE_JOB'), moderatorController.tsApproveJob);
+router.put('/job/:id/ops-publish', checkPermission('APPROVE_JOB'), moderatorController.opsPublishJob);
 
 // Logs
 router.get('/logs', moderatorController.getLogs);

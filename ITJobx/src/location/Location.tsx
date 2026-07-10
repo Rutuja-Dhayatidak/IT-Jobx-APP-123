@@ -11,6 +11,8 @@ import {
   Platform,
   ScrollView,
   Dimensions,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
 
@@ -25,6 +27,7 @@ export default function Location({ onFinish, onBackPress }: LocationProps) {
   // Mode state: 'prompt' = What is Your Location, 'search' = Enter Your Location
   const [mode, setMode] = useState<'prompt' | 'search'>('prompt');
   const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(false);
 
   // Sample locations search results
   const sampleResults = [
@@ -45,9 +48,31 @@ export default function Location({ onFinish, onBackPress }: LocationProps) {
     }
   };
 
-  const handleAllowAccess = () => {
-    // Simulate location access success
-    handleSelectLocation('My Current Location (GPS)');
+  const handleAllowAccess = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('http://ip-api.com/json');
+      const text = await response.text();
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (e) {
+        throw new Error('Response is not valid JSON');
+      }
+
+      if (data && data.status === 'success' && data.city && data.regionName) {
+        const locString = `${data.city}, ${data.regionName}`;
+        console.log('Automatically detected location:', locString);
+        handleSelectLocation(locString);
+      } else {
+        handleSelectLocation('Mumbai, Maharashtra');
+      }
+    } catch (error) {
+      console.error('Failed to get automatic location:', error);
+      handleSelectLocation('Mumbai, Maharashtra'); // Default fallback
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -88,11 +113,16 @@ export default function Location({ onFinish, onBackPress }: LocationProps) {
 
               {/* Buttons */}
               <TouchableOpacity
-                style={styles.primaryButton}
+                style={[styles.primaryButton, loading && { opacity: 0.8 }]}
                 onPress={handleAllowAccess}
                 activeOpacity={0.8}
+                disabled={loading}
               >
-                <Text style={styles.primaryButtonText}>Allow Location Access</Text>
+                {loading ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <Text style={styles.primaryButtonText}>Allow Location Access</Text>
+                )}
               </TouchableOpacity>
 
               <TouchableOpacity

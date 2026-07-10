@@ -21,6 +21,14 @@ router.post('/company/reject/:id', opsController.rejectCompany);
 router.get('/jobs', opsController.getJobs);
 router.delete('/job/:id', opsController.deleteJob);
 
+// Ops Admin 3 Decisions + Power Tools
+router.post('/job/send-back/:id', opsController.sendBackJob);
+router.post('/job/hold/:id', opsController.holdJob);
+router.post('/job/override/:id', opsController.overrideJobStatus);
+router.post('/job/feature/:id', opsController.toggleFeatured);
+router.get('/sla-breaches', opsController.getSLABreaches);
+router.post('/company/whitelist/:id', opsController.whitelistCompany);
+
 // Content Moderation
 router.get('/moderation', opsController.getModerationQueue);
 router.post('/approve/:id', opsController.approveJob);

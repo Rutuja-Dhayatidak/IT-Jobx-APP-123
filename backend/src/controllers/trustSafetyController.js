@@ -176,7 +176,7 @@ exports.getFraudAnalysis = async (req, res) => {
     const analysis = await Fraud.find()
       .populate('userId', 'firstName lastName email')
       .sort('-riskLevel');
-    
+
     // Auto-calculate risk scores dynamically
     const enriched = await Promise.all(analysis.map(async (a) => {
       const dynamicRisk = await calculateRiskLevel(a.userId?._id, 'user');
@@ -240,7 +240,7 @@ exports.searchData = async (req, res) => {
     if (!q) return res.json([]);
 
     const [users, jobs, reports] = await Promise.all([
-      Candidate.find({ 
+      Candidate.find({
         $or: [
           { firstName: { $regex: q, $options: 'i' } },
           { lastName: { $regex: q, $options: 'i' } },
@@ -274,7 +274,7 @@ exports.getAuditLogs = async (req, res) => {
 const calculateCompanyRisk = (company) => {
   let riskScore = 'Low';
   let flaggedReasons = [];
-  
+
   if (!company.website_url) {
     riskScore = 'Medium';
     flaggedReasons.push('No website URL provided');
@@ -285,7 +285,7 @@ const calculateCompanyRisk = (company) => {
 
   const emailDomain = company.email.split('@')[1];
   const webDomain = company.website_url ? company.website_url.replace(/^(?:https?:\/\/)?(?:www\.)?/i, "").split('/')[0] : '';
-  
+
   // Basic domain mismatch check
   if (webDomain && emailDomain && emailDomain !== webDomain && !['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com'].includes(emailDomain)) {
     riskScore = 'High';
@@ -305,7 +305,7 @@ exports.getCompanyRequests = async (req, res) => {
   try {
     const { status, risk } = req.query;
     let query = {};
-    
+
     if (status) query.trust_safety_status = status;
     if (risk) query.risk_score = risk;
 
@@ -330,14 +330,14 @@ exports.getCompanyRequests = async (req, res) => {
       const checklistDB = comp.verification_checklist || {};
       const fraudChecklist = {
         websiteActive: checklistDB.website_active !== null && checklistDB.website_active !== undefined ? checklistDB.website_active : !!comp.website_url,
-        googlePresence: checklistDB.google_presence !== null && checklistDB.google_presence !== undefined ? checklistDB.google_presence : null, 
+        googlePresence: checklistDB.google_presence !== null && checklistDB.google_presence !== undefined ? checklistDB.google_presence : null,
         noDuplicates: checklistDB.no_duplicates !== null && checklistDB.no_duplicates !== undefined ? checklistDB.no_duplicates : duplicateCount === 0,
         logoVerification: checklistDB.logo_verified !== null && checklistDB.logo_verified !== undefined ? checklistDB.logo_verified : null
       };
 
       if (comp.trust_safety_status === 'pending' && !comp.flagged_reason && !comp.risk_flagged) {
         let { riskScore, flaggedReason } = calculateCompanyRisk(comp);
-        
+
         if (duplicateCount > 0) {
           riskScore = 'Critical';
           flaggedReason = (flaggedReason ? flaggedReason + ', ' : '') + 'Duplicate company details detected';
@@ -349,7 +349,7 @@ exports.getCompanyRequests = async (req, res) => {
           await comp.save();
         }
       }
-      
+
       const docs = await CompanyDocument.find({ company_id: comp._id });
       const compObj = comp.toObject();
       compObj.fraudChecklist = fraudChecklist;
@@ -422,7 +422,7 @@ exports.rejectCompanyRequest = async (req, res) => {
       <p><strong>Reason:</strong> ${reason}</p>
       <p>Please fix the mentioned issues and contact support if you believe this is a mistake.</p>
     `;
-    await sendEmail(company.email || company.official_work_email, 'Company Registration Status - NextHire', emailHtml);
+    await sendEmail(company.email || company.official_work_email, 'Company Registration Status - ITjobx', emailHtml);
 
     res.json({ message: 'Company request rejected and email sent' });
   } catch (err) {
@@ -464,11 +464,11 @@ exports.flagCompanyRisk = async (req, res) => {
     company.flagged_reason = reason;
     company.flagged_by = req.user.id;
     company.flagged_at = new Date();
-    
+
     if (riskScore === 'Critical') {
-        company.trust_safety_status = 'escalated';
+      company.trust_safety_status = 'escalated';
     }
-    
+
     await company.save();
 
     await new TrustLog({
@@ -513,7 +513,7 @@ exports.verifyChecklistItem = async (req, res) => {
     if (!company.verification_checklist) {
       company.verification_checklist = {};
     }
-    
+
     company.verification_checklist[key] = value;
     await company.save();
 
@@ -557,9 +557,9 @@ exports.sendCompanyEmailLink = async (req, res) => {
     company.otp_rate_limit_reset = new Date(Date.now() + 60 * 1000); // 1 minute cooldown
     await company.save();
 
-    // Verification URL pointing to the frontend
-    const origin = req.headers.origin || 'http://localhost:5173';
-    const verifyUrl = `${origin}/company/verify-email/${rawToken}`;
+    // Verification URL pointing to the frontend (port 5173), even if requested from admin dashboard (port 5174)
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const verifyUrl = `${frontendUrl}/company/verify-email/${rawToken}`;
 
     // Send professional HTML email using Nodemailer
     const subject = "Verify Your Official Company Email";
@@ -583,9 +583,9 @@ exports.sendCompanyEmailLink = async (req, res) => {
 
     await sendEmail(company.official_work_email, subject, text, html);
 
-    res.json({ 
+    res.json({
       message: 'Verification link sent successfully to official work email',
-      verifyUrl 
+      verifyUrl
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -651,9 +651,9 @@ exports.verifyCompanyEmailLink = async (req, res) => {
       await sendEmail(adminEmails[0], `Notification: Official Company Email Verified - ${company.name}`, emailHtml);
     }
 
-    res.json({ 
-      success: true, 
-      message: 'Official company email verified successfully.', 
+    res.json({
+      success: true,
+      message: 'Official company email verified successfully.',
       companyName: company.name,
       trustScore: company.trust_score
     });
@@ -665,7 +665,7 @@ exports.verifyCompanyEmailLink = async (req, res) => {
 exports.updateVerificationField = async (req, res) => {
   try {
     const { companyId, field, value } = req.body;
-    
+
     if (!companyId) return res.status(400).json({ message: 'companyId is required' });
     if (!field) return res.status(400).json({ message: 'field is required' });
     if (value === undefined) return res.status(400).json({ message: 'value is required' });
@@ -730,6 +730,15 @@ exports.updateVerificationField = async (req, res) => {
     // If email_verified && website_verified && documents_verified are all true, verification_status = "approved"
     if (company.email_verified && company.website_verified && company.documents_verified) {
       company.verification_status = 'approved';
+      company.status = 'approved';
+      company.isVerified = true;
+      if (company.owner_user_id) {
+        await Candidate.findByIdAndUpdate(company.owner_user_id, {
+          role: "employer",
+          is_employer: true,
+          current_mode: 'employer'
+        });
+      }
     } else {
       company.verification_status = 'pending';
     }
@@ -748,7 +757,7 @@ exports.updateVerificationField = async (req, res) => {
 
     // Fetch and attach documents and fraudChecklist so the frontend does not lose them on update!
     const docs = await CompanyDocument.find({ company_id: company._id });
-    
+
     // Duplicate count for checklist
     const duplicateCount = await Company.countDocuments({
       _id: { $ne: company._id },
@@ -761,7 +770,7 @@ exports.updateVerificationField = async (req, res) => {
     const checklistDB = company.verification_checklist || {};
     const fraudChecklist = {
       websiteActive: checklistDB.website_active !== null && checklistDB.website_active !== undefined ? checklistDB.website_active : !!company.website_url,
-      googlePresence: checklistDB.google_presence !== null && checklistDB.google_presence !== undefined ? checklistDB.google_presence : null, 
+      googlePresence: checklistDB.google_presence !== null && checklistDB.google_presence !== undefined ? checklistDB.google_presence : null,
       noDuplicates: checklistDB.no_duplicates !== null && checklistDB.no_duplicates !== undefined ? checklistDB.no_duplicates : duplicateCount === 0,
       logoVerification: checklistDB.logo_verified !== null && checklistDB.logo_verified !== undefined ? checklistDB.logo_verified : null
     };
@@ -770,8 +779,8 @@ exports.updateVerificationField = async (req, res) => {
     companyObj.documents = docs;
     companyObj.fraudChecklist = fraudChecklist;
 
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       message: 'Company verification updated successfully',
       company: companyObj
     });
