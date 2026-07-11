@@ -1,6 +1,15 @@
 C:/ITApp/ITJobx/android/app/.cxx/Debug/2s6k1653/armeabi-v7a/CMakeFiles/appmodules.dir
 C:/ITApp/ITJobx/android/app/.cxx/Debug/2s6k1653/armeabi-v7a/CMakeFiles/edit_cache.dir
 C:/ITApp/ITJobx/android/app/.cxx/Debug/2s6k1653/armeabi-v7a/CMakeFiles/rebuild_cache.dir
+C:/ITApp/ITJobx/android/app/.cxx/Debug/2s6k1653/armeabi-v7a/AsyncStorageSpec_autolinked_build/CMakeFiles/react_codegen_AsyncStorageSpec.dir
+C:/ITApp/ITJobx/android/app/.cxx/Debug/2s6k1653/armeabi-v7a/AsyncStorageSpec_autolinked_build/CMakeFiles/edit_cache.dir
+C:/ITApp/ITJobx/android/app/.cxx/Debug/2s6k1653/armeabi-v7a/AsyncStorageSpec_autolinked_build/CMakeFiles/rebuild_cache.dir
+C:/ITApp/ITJobx/android/app/.cxx/Debug/2s6k1653/armeabi-v7a/rndocumentpickerCGen_autolinked_build/CMakeFiles/react_codegen_rndocumentpickerCGen.dir
+C:/ITApp/ITJobx/android/app/.cxx/Debug/2s6k1653/armeabi-v7a/rndocumentpickerCGen_autolinked_build/CMakeFiles/edit_cache.dir
+C:/ITApp/ITJobx/android/app/.cxx/Debug/2s6k1653/armeabi-v7a/rndocumentpickerCGen_autolinked_build/CMakeFiles/rebuild_cache.dir
+C:/ITApp/ITJobx/android/app/.cxx/Debug/2s6k1653/armeabi-v7a/lottiereactnative_autolinked_build/CMakeFiles/react_codegen_lottiereactnative.dir
+C:/ITApp/ITJobx/android/app/.cxx/Debug/2s6k1653/armeabi-v7a/lottiereactnative_autolinked_build/CMakeFiles/edit_cache.dir
+C:/ITApp/ITJobx/android/app/.cxx/Debug/2s6k1653/armeabi-v7a/lottiereactnative_autolinked_build/CMakeFiles/rebuild_cache.dir
 C:/ITApp/ITJobx/android/app/.cxx/Debug/2s6k1653/armeabi-v7a/safeareacontext_autolinked_build/CMakeFiles/react_codegen_safeareacontext.dir
 C:/ITApp/ITJobx/android/app/.cxx/Debug/2s6k1653/armeabi-v7a/safeareacontext_autolinked_build/CMakeFiles/edit_cache.dir
 C:/ITApp/ITJobx/android/app/.cxx/Debug/2s6k1653/armeabi-v7a/safeareacontext_autolinked_build/CMakeFiles/rebuild_cache.dir

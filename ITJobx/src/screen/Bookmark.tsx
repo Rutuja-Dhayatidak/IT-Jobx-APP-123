@@ -21,56 +21,13 @@ interface BookmarkProps {
   onNavigateToTab?: (tab: 'home' | 'portfolio' | 'saved' | 'chat' | 'profile') => void;
   onJobPress?: (job: any) => void;
   isDarkTheme?: boolean;
+  savedJobs?: any[];
+  onToggleSave?: (job: any) => void;
 }
 
-export default function Bookmark({ onBackPress, onNavigateToTab, onJobPress, isDarkTheme = false }: BookmarkProps) {
+export default function Bookmark({ onBackPress, onNavigateToTab, onJobPress, isDarkTheme = false, savedJobs = [], onToggleSave }: BookmarkProps) {
   const dynamicStyles = isDarkTheme ? darkStyles : lightStyles;
 
-  // Mock bookmarked jobs data matching the screenshot
-  const initialBookmarkedJobs = [
-    {
-      id: 'b1',
-      title: 'React Developer',
-      company: 'AmplifyAvenue',
-      logo: 'A.',
-      logoBg: '#FCD34D', // Yellow/Gold
-      logoTextColor: '#1E293B',
-      location: 'Remote',
-      salary: '$62k - $82k',
-      salaryUnit: '/month',
-      tags: ['Full-Time', 'Remote', 'Mid-Senior Level'],
-      applicants: 52,
-    },
-    {
-      id: 'b2',
-      title: 'Accountant',
-      company: 'QubitLink Software',
-      logo: 'Q.',
-      logoBg: '#1E293B', // Dark charcoal
-      logoTextColor: '#FFFFFF',
-      location: 'On-site',
-      salary: '$42',
-      salaryUnit: '/hr',
-      tags: ['Contract', 'On-Site', 'Associate'],
-      applicants: 52,
-    },
-    {
-      id: 'b3',
-      title: 'React Native Developer',
-      company: 'YellowByte Innovations',
-      logo: 'Y.',
-      logoBg: '#2563EB', // Blue/Purple
-      logoTextColor: '#FFFFFF',
-      location: 'On-site',
-      salary: '$70',
-      salaryUnit: '/hr',
-      tags: ['Contract', 'On-Site', 'Associate'],
-      applicants: 52,
-    },
-  ];
-
-  // Local state to manage bookmarks
-  const [jobs, setJobs] = useState(initialBookmarkedJobs);
   const [showRemoveModal, setShowRemoveModal] = useState(false);
   const [selectedJobToRemove, setSelectedJobToRemove] = useState<any>(null);
 
@@ -80,8 +37,8 @@ export default function Bookmark({ onBackPress, onNavigateToTab, onJobPress, isD
   };
 
   const handleConfirmRemove = () => {
-    if (selectedJobToRemove) {
-      setJobs((prevJobs) => prevJobs.filter((job) => job.id !== selectedJobToRemove.id));
+    if (selectedJobToRemove && onToggleSave) {
+      onToggleSave(selectedJobToRemove);
     }
     setShowRemoveModal(false);
   };
@@ -106,68 +63,79 @@ export default function Bookmark({ onBackPress, onNavigateToTab, onJobPress, isD
 
         {/* Saved Jobs List */}
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-          {jobs.map((job) => (
-            <TouchableOpacity
-              key={job.id}
-              style={[styles.jobCard, { backgroundColor: dynamicStyles.cardBg, borderColor: dynamicStyles.cardBorder }]}
-              onPress={() => onJobPress && onJobPress(job)}
-              activeOpacity={0.9}
-            >
-              {/* Top Row: Logo, Title, Bookmark Icon */}
-              <View style={styles.cardHeader}>
-                <View style={[styles.logoContainer, { backgroundColor: job.logoBg }]}>
-                  <Text style={[styles.logoText, { color: job.logoTextColor }]}>{job.logo}</Text>
-                </View>
-                <View style={styles.titleContainer}>
-                  <Text style={[styles.jobTitle, { color: dynamicStyles.textColor }]} numberOfLines={1}>
-                    {job.title}
-                  </Text>
-                  <Text style={styles.companyName} numberOfLines={1}>
-                    {job.company}
-                  </Text>
-                </View>
-                <TouchableOpacity 
-                  style={styles.bookmarkButton} 
-                  activeOpacity={0.7}
-                  onPress={() => handleOpenRemoveModal(job)}
-                >
-                  <Svg width={20} height={20} viewBox="0 0 24 24" fill="#2563EB">
-                    <Path d="M17 3H7c-1.1 0-1.99.9-1.99 2L5 21l7-3 7 3V5c0-1.1-.9-2-2-2z" />
-                  </Svg>
-                </TouchableOpacity>
-              </View>
+          {savedJobs.map((job) => {
+            const jobId = job._id || job.id;
+            const logoBg = job.logoBg || '#2563EB';
+            const logoTextColor = job.logoTextColor || '#FFFFFF';
+            const logoText = job.logo || (job.company ? job.company.substring(0, 1) + '.' : 'J.');
+            const jobTags = job.tags || ['Full-Time', 'Remote'];
+            const applicantsCount = job.applicants || 0;
+            const salaryText = job.salary || 'Negotiable';
+            const salaryUnitText = job.salaryUnit || '';
 
-              {/* Tags Row */}
-              <View style={styles.tagsContainer}>
-                {job.tags.map((tag, i) => (
-                  <View key={i} style={[styles.tagPill, { backgroundColor: isDarkTheme ? 'rgba(255, 255, 255, 0.05)' : '#F1F5F9' }]}>
-                    <Text style={[styles.tagText, { color: isDarkTheme ? '#94A3B8' : '#475569' }]}>{tag}</Text>
+            return (
+              <TouchableOpacity
+                key={jobId}
+                style={[styles.jobCard, { backgroundColor: dynamicStyles.cardBg, borderColor: dynamicStyles.cardBorder }]}
+                onPress={() => onJobPress && onJobPress(job)}
+                activeOpacity={0.9}
+              >
+                {/* Top Row: Logo, Title, Bookmark Icon */}
+                <View style={styles.cardHeader}>
+                  <View style={[styles.logoContainer, { backgroundColor: logoBg }]}>
+                    <Text style={[styles.logoText, { color: logoTextColor }]}>{logoText}</Text>
                   </View>
-                ))}
-              </View>
+                  <View style={styles.titleContainer}>
+                    <Text style={[styles.jobTitle, { color: dynamicStyles.textColor }]} numberOfLines={1}>
+                      {job.title}
+                    </Text>
+                    <Text style={styles.companyName} numberOfLines={1}>
+                      {job.company}
+                    </Text>
+                  </View>
+                  <TouchableOpacity 
+                    style={styles.bookmarkButton} 
+                    activeOpacity={0.7}
+                    onPress={() => handleOpenRemoveModal(job)}
+                  >
+                    <Svg width={20} height={20} viewBox="0 0 24 24" fill="#2563EB">
+                      <Path d="M17 3H7c-1.1 0-1.99.9-1.99 2L5 21l7-3 7 3V5c0-1.1-.9-2-2-2z" />
+                    </Svg>
+                  </TouchableOpacity>
+                </View>
 
-              {/* Footer Row: Applicants and Salary */}
-              <View style={styles.cardFooter}>
-                <View style={styles.applicantsWrapper}>
-                  <View style={styles.avatarStack}>
-                    <View style={[styles.miniAvatar, { backgroundColor: '#F43F5E', zIndex: 3, borderColor: dynamicStyles.avatarBorder }]} />
-                    <View style={[styles.miniAvatar, { backgroundColor: '#3B82F6', zIndex: 2, marginLeft: -8, borderColor: dynamicStyles.avatarBorder }]} />
-                    <View style={[styles.miniAvatar, { backgroundColor: '#10B981', zIndex: 1, marginLeft: -8, borderColor: dynamicStyles.avatarBorder }]} />
-                    <View style={[styles.miniAvatarPlus, { zIndex: 0, marginLeft: -8, borderColor: dynamicStyles.avatarBorder, backgroundColor: isDarkTheme ? '#1E293B' : '#E2E8F0' }]}>
-                      <Text style={styles.miniAvatarPlusText}>+</Text>
+                {/* Tags Row */}
+                <View style={styles.tagsContainer}>
+                  {jobTags.map((tag: string, i: number) => (
+                    <View key={i} style={[styles.tagPill, { backgroundColor: isDarkTheme ? 'rgba(255, 255, 255, 0.05)' : '#F1F5F9' }]}>
+                      <Text style={[styles.tagText, { color: isDarkTheme ? '#94A3B8' : '#475569' }]}>{tag}</Text>
                     </View>
-                  </View>
-                  <Text style={styles.applicantsText}>{job.applicants} Applicants</Text>
+                  ))}
                 </View>
 
-                <Text style={styles.salaryText}>
-                  {job.salary}
-                  <Text style={styles.salaryUnit}>{job.salaryUnit}</Text>
-                </Text>
-              </View>
-            </TouchableOpacity>
-          ))}
-          {jobs.length === 0 && (
+                {/* Footer Row: Applicants and Salary */}
+                <View style={styles.cardFooter}>
+                  <View style={styles.applicantsWrapper}>
+                    <View style={styles.avatarStack}>
+                      <View style={[styles.miniAvatar, { backgroundColor: '#F43F5E', zIndex: 3, borderColor: dynamicStyles.avatarBorder }]} />
+                      <View style={[styles.miniAvatar, { backgroundColor: '#3B82F6', zIndex: 2, marginLeft: -8, borderColor: dynamicStyles.avatarBorder }]} />
+                      <View style={[styles.miniAvatar, { backgroundColor: '#10B981', zIndex: 1, marginLeft: -8, borderColor: dynamicStyles.avatarBorder }]} />
+                      <View style={[styles.miniAvatarPlus, { zIndex: 0, marginLeft: -8, borderColor: dynamicStyles.avatarBorder, backgroundColor: isDarkTheme ? '#1E293B' : '#E2E8F0' }]}>
+                        <Text style={styles.miniAvatarPlusText}>+</Text>
+                      </View>
+                    </View>
+                    <Text style={styles.applicantsText}>{applicantsCount} Applicants</Text>
+                  </View>
+
+                  <Text style={styles.salaryText}>
+                    {salaryText}
+                    {salaryUnitText ? <Text style={styles.salaryUnit}>{salaryUnitText}</Text> : null}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+          {savedJobs.length === 0 && (
             <View style={styles.emptyContainer}>
               <Text style={[styles.emptyText, { color: isDarkTheme ? '#94A3B8' : '#64748B' }]}>No bookmarked jobs found.</Text>
             </View>
@@ -196,8 +164,8 @@ export default function Bookmark({ onBackPress, onNavigateToTab, onJobPress, isD
             {selectedJobToRemove && (
               <View style={[styles.previewCard, { backgroundColor: isDarkTheme ? '#0F172A' : '#F8FAFC', borderColor: dynamicStyles.cardBorder }]}>
                 <View style={styles.cardHeader}>
-                  <View style={[styles.logoContainer, { backgroundColor: selectedJobToRemove.logoBg }]}>
-                    <Text style={[styles.logoText, { color: selectedJobToRemove.logoTextColor }]}>{selectedJobToRemove.logo}</Text>
+                  <View style={[styles.logoContainer, { backgroundColor: selectedJobToRemove.logoBg || '#2563EB' }]}>
+                    <Text style={[styles.logoText, { color: selectedJobToRemove.logoTextColor || '#FFFFFF' }]}>{selectedJobToRemove.logo || (selectedJobToRemove.company ? selectedJobToRemove.company.substring(0, 1) + '.' : 'J.')}</Text>
                   </View>
                   <View style={styles.titleContainer}>
                     <Text style={[styles.jobTitle, { color: dynamicStyles.textColor }]} numberOfLines={1}>
@@ -209,7 +177,7 @@ export default function Bookmark({ onBackPress, onNavigateToTab, onJobPress, isD
                   </View>
                 </View>
                 <View style={styles.tagsContainer}>
-                  {selectedJobToRemove.tags.map((tag: string, i: number) => (
+                  {(selectedJobToRemove.tags || ['Full-Time', 'Remote']).map((tag: string, i: number) => (
                     <View key={i} style={[styles.tagPill, { backgroundColor: isDarkTheme ? 'rgba(255, 255, 255, 0.05)' : '#E2E8F0' }]}>
                       <Text style={[styles.tagText, { color: isDarkTheme ? '#94A3B8' : '#475569' }]}>{tag}</Text>
                     </View>
@@ -222,11 +190,11 @@ export default function Bookmark({ onBackPress, onNavigateToTab, onJobPress, isD
                       <View style={[styles.miniAvatar, { backgroundColor: '#3B82F6', zIndex: 2, marginLeft: -8, borderColor: isDarkTheme ? '#0F172A' : '#F8FAFC' }]} />
                       <View style={[styles.miniAvatar, { backgroundColor: '#10B981', zIndex: 1, marginLeft: -8, borderColor: isDarkTheme ? '#0F172A' : '#F8FAFC' }]} />
                     </View>
-                    <Text style={styles.applicantsText}>{selectedJobToRemove.applicants} Applicants</Text>
+                    <Text style={styles.applicantsText}>{(selectedJobToRemove.applicants || 0)} Applicants</Text>
                   </View>
                   <Text style={styles.salaryText}>
                     {selectedJobToRemove.salary}
-                    <Text style={styles.salaryUnit}>{selectedJobToRemove.salaryUnit}</Text>
+                    {selectedJobToRemove.salaryUnit ? <Text style={styles.salaryUnit}>{selectedJobToRemove.salaryUnit}</Text> : null}
                   </Text>
                 </View>
               </View>

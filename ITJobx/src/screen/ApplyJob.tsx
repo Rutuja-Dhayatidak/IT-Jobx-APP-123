@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -10,9 +10,15 @@ import {
   TextInput,
   Dimensions,
   Platform,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import Svg, { Path, Rect, Circle } from 'react-native-svg';
 import FadeInView from '../components/FadeInView';
+import { jobService } from '../services/job';
+import { viewProfileService } from '../services/viewProfile';
+import LottieView from 'lottie-react-native';
+import { pick, errorCodes, isErrorWithCode } from '@react-native-documents/picker';
 
 const { width } = Dimensions.get('window');
 
@@ -20,6 +26,7 @@ interface ApplyJobProps {
   onBackPress: () => void;
   isDarkTheme?: boolean;
   jobTitle?: string;
+  jobId?: string;
   onGoToApplication: () => void;
 }
 
@@ -44,28 +51,106 @@ const CongratulationsCheckIcon = () => (
   </View>
 );
 
-export default function ApplyJob({ onBackPress, isDarkTheme = false, jobTitle = "Software Developer", onGoToApplication }: ApplyJobProps) {
+export default function ApplyJob({ onBackPress, isDarkTheme = false, jobTitle = "Software Developer", jobId, onGoToApplication }: ApplyJobProps) {
   const dynamicStyles = isDarkTheme ? darkStyles : lightStyles;
 
   // Form states
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [resumeName, setResumeName] = useState<string | null>(null);
+  const [resumeUrl, setResumeUrl] = useState('');
   const [additionalText, setAdditionalText] = useState('');
 
-  // Submission state
+  // States for API interaction
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [showAnimation, setShowAnimation] = useState(false);
 
-  const handleUploadResume = () => {
-    // Simulate resume upload selection
-    setResumeName('my_resume_cv.pdf');
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const data = await viewProfileService.getProfile();
+        if (data && data.success && data.profile) {
+          const userObj = data.profile.userId;
+          if (userObj) {
+            setFullName(`${userObj.firstName || ''} ${userObj.lastName || ''}`.trim());
+            setEmail(userObj.email || '');
+          }
+          if (data.profile.resumeUrl) {
+            setResumeUrl(data.profile.resumeUrl);
+            setResumeName('profile_resume.pdf');
+          }
+        }
+      } catch (err: any) {
+        console.error('Error fetching profile for apply job:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProfile();
+  }, []);
+
+  const handleUploadResume = async () => {
+    try {
+      const pickResults = await pick({
+        type: ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/msword'],
+      });
+      const res = pickResults[0];
+      
+      setSubmitting(true);
+      
+      const formData = new FormData();
+      formData.append('file', {
+        uri: Platform.OS === 'android' ? res.uri : res.uri.replace('file://', ''),
+        type: res.type || 'application/pdf',
+        name: res.name || 'resume.pdf',
+      } as any);
+
+      const uploadRes = await jobService.uploadResume(formData);
+
+      if (uploadRes && uploadRes.success) {
+        setResumeUrl(uploadRes.resumeUrl);
+        setResumeName(res.name || 'resume.pdf');
+        Alert.alert('Success', 'Resume uploaded successfully!');
+      } else {
+        Alert.alert('Error', 'Failed to upload resume to server.');
+      }
+    } catch (err: any) {
+      if (isErrorWithCode(err) && err.code === errorCodes.OPERATION_CANCELED) {
+        console.log('User cancelled document picker');
+      } else {
+        Alert.alert('Error', err.message || 'Failed to select and upload document.');
+      }
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const handleSubmit = () => {
-    if (fullName.trim() === '' || email.trim() === '' || !resumeName) {
-      // Allow simulation even if not fully typed, or we can just submit directly
+  const handleSubmit = async () => {
+    if (!resumeUrl) {
+      Alert.alert('Error', 'Please upload or provide a resume/CV.');
+      return;
     }
-    setIsSubmitted(true);
+    if (!jobId) {
+      Alert.alert('Error', 'Job ID is missing.');
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      const data = await jobService.applyJob(jobId, resumeUrl, additionalText);
+
+      if (data && data.success) {
+        setIsSubmitted(true);
+      } else {
+        Alert.alert('Error', data.message || 'Failed to submit application.');
+      }
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to submit application.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   // If successfully submitted, render the Congratulations screen
@@ -141,83 +226,94 @@ export default function ApplyJob({ onBackPress, isDarkTheme = false, jobTitle = 
         </View>
 
         {/* Scrollable Form Container */}
-        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-          {/* Full Name Input */}
-          <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: dynamicStyles.textColor }]}>Full Name</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: dynamicStyles.inputBg, color: dynamicStyles.textColor, borderColor: dynamicStyles.inputBorder }]}
-              placeholder="John Doe"
-              placeholderTextColor={isDarkTheme ? '#64748B' : '#94A3B8'}
-              value={fullName}
-              onChangeText={setFullName}
-            />
-          </View>
+        {loading ? (
+          <ActivityIndicator size="large" color="#2563EB" style={{ marginTop: 40, flex: 1 }} />
+        ) : (
+          <>
+            <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+              {/* Full Name Input */}
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { color: dynamicStyles.textColor }]}>Full Name</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: dynamicStyles.inputBg, color: dynamicStyles.textColor, borderColor: dynamicStyles.inputBorder }]}
+                  placeholder="John Doe"
+                  placeholderTextColor={isDarkTheme ? '#64748B' : '#94A3B8'}
+                  value={fullName}
+                  onChangeText={setFullName}
+                />
+              </View>
 
-          {/* Email Input */}
-          <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: dynamicStyles.textColor }]}>Email</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: dynamicStyles.inputBg, color: dynamicStyles.textColor, borderColor: dynamicStyles.inputBorder }]}
-              placeholder="example@gmail.com"
-              placeholderTextColor={isDarkTheme ? '#64748B' : '#94A3B8'}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              value={email}
-              onChangeText={setEmail}
-            />
-          </View>
+              {/* Email Input */}
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { color: dynamicStyles.textColor }]}>Email</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: dynamicStyles.inputBg, color: dynamicStyles.textColor, borderColor: dynamicStyles.inputBorder }]}
+                  placeholder="example@gmail.com"
+                  placeholderTextColor={isDarkTheme ? '#64748B' : '#94A3B8'}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  value={email}
+                  onChangeText={setEmail}
+                />
+              </View>
 
-          {/* CV / Resume Upload */}
-          <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: dynamicStyles.textColor }]}>Upload CV/Resume</Text>
-            <TouchableOpacity
-              style={[
-                styles.uploadArea,
-                { backgroundColor: dynamicStyles.uploadBg, borderColor: resumeName ? '#2563EB' : dynamicStyles.uploadBorder }
-              ]}
-              activeOpacity={0.8}
-              onPress={handleUploadResume}
-            >
-              <UploadIcon />
-              <Text style={[styles.uploadText, { color: '#2563EB' }]}>
-                {resumeName ? resumeName : 'Browse File'}
-              </Text>
-              {resumeName && (
-                <Text style={styles.uploadSubtext}>Click to replace file</Text>
-              )}
-            </TouchableOpacity>
-          </View>
+              {/* CV / Resume Upload */}
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { color: dynamicStyles.textColor }]}>Upload CV/Resume</Text>
+                <TouchableOpacity
+                  style={[
+                    styles.uploadArea,
+                    { backgroundColor: dynamicStyles.uploadBg, borderColor: resumeName ? '#2563EB' : dynamicStyles.uploadBorder }
+                  ]}
+                  activeOpacity={0.8}
+                  onPress={handleUploadResume}
+                >
+                  <UploadIcon />
+                  <Text style={[styles.uploadText, { color: '#2563EB' }]}>
+                    {resumeName ? resumeName : 'Browse File'}
+                  </Text>
+                  {resumeName && (
+                    <Text style={styles.uploadSubtext}>Click to replace file</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
 
-          {/* Cover / Add Text */}
-          <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: dynamicStyles.textColor }]}>Add Text</Text>
-            <TextInput
-              style={[
-                styles.textArea,
-                { backgroundColor: dynamicStyles.inputBg, color: dynamicStyles.textColor, borderColor: dynamicStyles.inputBorder }
-              ]}
-              placeholder="Write Something here.."
-              placeholderTextColor={isDarkTheme ? '#64748B' : '#94A3B8'}
-              multiline
-              numberOfLines={6}
-              textAlignVertical="top"
-              value={additionalText}
-              onChangeText={setAdditionalText}
-            />
-          </View>
-        </ScrollView>
+              {/* Cover / Add Text */}
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { color: dynamicStyles.textColor }]}>Add Text</Text>
+                <TextInput
+                  style={[
+                    styles.textArea,
+                    { backgroundColor: dynamicStyles.inputBg, color: dynamicStyles.textColor, borderColor: dynamicStyles.inputBorder }
+                  ]}
+                  placeholder="Write Something here.."
+                  placeholderTextColor={isDarkTheme ? '#64748B' : '#94A3B8'}
+                  multiline
+                  numberOfLines={6}
+                  textAlignVertical="top"
+                  value={additionalText}
+                  onChangeText={setAdditionalText}
+                />
+              </View>
+            </ScrollView>
 
-        {/* Bottom Sticky Submit Button */}
-        <View style={[styles.footer, { backgroundColor: dynamicStyles.backgroundColor, borderTopColor: dynamicStyles.buttonBorder }]}>
-          <TouchableOpacity
-            style={styles.submitButton}
-            activeOpacity={0.8}
-            onPress={handleSubmit}
-          >
-            <Text style={styles.submitButtonText}>Submit</Text>
-          </TouchableOpacity>
-        </View>
+            {/* Bottom Sticky Submit Button */}
+            <View style={[styles.footer, { backgroundColor: dynamicStyles.backgroundColor, borderTopColor: dynamicStyles.buttonBorder }]}>
+              <TouchableOpacity
+                style={[styles.submitButton, submitting && { opacity: 0.7 }]}
+                activeOpacity={0.8}
+                onPress={handleSubmit}
+                disabled={submitting}
+              >
+                {submitting ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <Text style={styles.submitButtonText}>Submit</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
       </FadeInView>
     </SafeAreaView>
   );

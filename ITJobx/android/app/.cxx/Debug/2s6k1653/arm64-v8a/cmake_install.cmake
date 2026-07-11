@@ -44,6 +44,9 @@ endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for each subdirectory.
+  include("C:/ITApp/ITJobx/android/app/.cxx/Debug/2s6k1653/arm64-v8a/AsyncStorageSpec_autolinked_build/cmake_install.cmake")
+  include("C:/ITApp/ITJobx/android/app/.cxx/Debug/2s6k1653/arm64-v8a/rndocumentpickerCGen_autolinked_build/cmake_install.cmake")
+  include("C:/ITApp/ITJobx/android/app/.cxx/Debug/2s6k1653/arm64-v8a/lottiereactnative_autolinked_build/cmake_install.cmake")
   include("C:/ITApp/ITJobx/android/app/.cxx/Debug/2s6k1653/arm64-v8a/safeareacontext_autolinked_build/cmake_install.cmake")
   include("C:/ITApp/ITJobx/android/app/.cxx/Debug/2s6k1653/arm64-v8a/rnsvg_autolinked_build/cmake_install.cmake")
 

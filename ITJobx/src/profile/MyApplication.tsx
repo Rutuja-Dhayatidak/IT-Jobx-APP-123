@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -7,12 +7,15 @@ import {
   SafeAreaView,
   StatusBar,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
+import { jobService } from '../services/job';
 
 interface MyApplicationProps {
   onBackPress: () => void;
   isDarkTheme?: boolean;
+  onApplicationPress: (app: any) => void;
 }
 
 // Search Icon
@@ -29,73 +32,46 @@ const PinIcon = () => (
   </Svg>
 );
 
-export default function MyApplication({ onBackPress, isDarkTheme = true }: MyApplicationProps) {
+export default function MyApplication({ onBackPress, isDarkTheme = true, onApplicationPress }: MyApplicationProps) {
   const dynamicStyles = isDarkTheme ? darkStyles : lightStyles;
 
-  const applications = [
-    {
-      role: 'React Developer',
-      company: 'AmplifyAvenue',
-      location: 'New York, USA',
-      status: 'Sent',
-      logoLetter: 'A.',
-      logoColor: '#FBBF24',
-      logoTextCol: '#1E293B',
-      tags: ['Full-Time', 'Remote', 'Internship'],
-    },
-    {
-      role: 'Graphics Designer',
-      company: 'PixelPulse Tech',
-      location: 'New York, USA',
-      status: 'Accepted',
-      logoLetter: 'P.',
-      logoColor: '#1E293B',
-      logoTextCol: '#FFFFFF',
-      tags: ['Part-Time', 'Remote', 'Entry Level'],
-    },
-    {
-      role: 'UI Designer',
-      company: 'VelocityCraft',
-      location: 'New York, USA',
-      status: 'Rejected',
-      logoLetter: 'V.',
-      logoColor: '#F59E0B',
-      logoTextCol: '#FFFFFF',
-      tags: ['Part-Time', 'Remote', 'Entry Level'],
-    },
-    {
-      role: 'Accountant',
-      company: 'QubitLink Software',
-      location: 'New York, USA',
-      status: 'Pending',
-      logoLetter: 'Q.',
-      logoColor: '#1F2937',
-      logoTextCol: '#FFFFFF',
-      tags: ['Contract', 'On-Site', 'Associate'],
-    },
-    {
-      role: 'UX Designer',
-      company: 'TitanTech Labs',
-      location: 'New York, USA',
-      status: 'Accepted',
-      logoLetter: 'T.',
-      logoColor: '#1D4ED8',
-      logoTextCol: '#FFFFFF',
-      tags: ['Full-Time', 'Remote', 'Senior Level'],
-    },
-  ];
+  const [applications, setApplications] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchApplications = async () => {
+      try {
+        setLoading(true);
+        const data = await jobService.getMyApplications();
+        if (data && data.success) {
+          setApplications(data.applications || []);
+        } else {
+          setError('Failed to load applications');
+        }
+      } catch (err: any) {
+        console.error('Error fetching applications:', err);
+        setError(err.message || 'Failed to load applications');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchApplications();
+  }, []);
 
   const getStatusStyles = (status: string) => {
-    switch (status) {
-      case 'Accepted':
-        return { bg: isDarkTheme ? 'rgba(16, 185, 129, 0.1)' : '#DCFCE7', text: '#10B981' };
-      case 'Rejected':
-        return { bg: isDarkTheme ? 'rgba(239, 68, 68, 0.1)' : '#FEE2E2', text: '#EF4444' };
-      case 'Pending':
-        return { bg: isDarkTheme ? 'rgba(245, 158, 11, 0.1)' : '#FEF3C7', text: '#F59E0B' };
-      case 'Sent':
+    switch (status.toLowerCase()) {
+      case 'accepted':
+        return { bg: isDarkTheme ? 'rgba(16, 185, 129, 0.1)' : '#DCFCE7', text: '#10B981', label: 'Accepted' };
+      case 'rejected':
+        return { bg: isDarkTheme ? 'rgba(239, 68, 68, 0.1)' : '#FEE2E2', text: '#EF4444', label: 'Rejected' };
+      case 'under_review':
+        return { bg: isDarkTheme ? 'rgba(245, 158, 11, 0.1)' : '#FEF3C7', text: '#F59E0B', label: 'Review' };
+      case 'interviewing':
+        return { bg: isDarkTheme ? 'rgba(139, 92, 246, 0.1)' : '#F3E8FF', text: '#8B5CF6', label: 'Interview' };
+      case 'applied':
       default:
-        return { bg: isDarkTheme ? 'rgba(59, 130, 246, 0.1)' : '#DBEAFE', text: '#2563EB' };
+        return { bg: isDarkTheme ? 'rgba(59, 130, 246, 0.1)' : '#DBEAFE', text: '#2563EB', label: 'Applied' };
     }
   };
 
@@ -120,41 +96,77 @@ export default function MyApplication({ onBackPress, isDarkTheme = true }: MyApp
 
       {/* Applications List */}
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {applications.map((app, index) => {
-          const statusStyle = getStatusStyles(app.status);
-          return (
-            <View key={index} style={[styles.card, { backgroundColor: dynamicStyles.cardBg, borderColor: dynamicStyles.cardBorder }]}>
-              {/* Top Row with Logo and Info */}
-              <View style={styles.cardHeader}>
-                <View style={[styles.logoBox, { backgroundColor: app.logoColor }]}>
-                  <Text style={[styles.logoText, { color: app.logoTextCol }]}>{app.logoLetter}</Text>
-                </View>
-                <View style={styles.roleContainer}>
-                  <Text style={[styles.roleTitle, { color: dynamicStyles.textColor }]}>{app.role}</Text>
-                  <Text style={[styles.companyText, { color: dynamicStyles.labelColor }]}>{app.company}</Text>
-                </View>
-                <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
-                  <Text style={[styles.statusText, { color: statusStyle.text }]}>{app.status}</Text>
-                </View>
-              </View>
+        {loading ? (
+          <ActivityIndicator size="large" color="#2563EB" style={{ marginTop: 40 }} />
+        ) : error ? (
+          <View style={{ alignItems: 'center', marginTop: 40 }}>
+            <Text style={{ color: '#EF4444', fontSize: 15, textAlign: 'center' }}>{error}</Text>
+          </View>
+        ) : applications.length === 0 ? (
+          <View style={{ alignItems: 'center', marginTop: 60, paddingHorizontal: 20 }}>
+            <Svg width={80} height={80} viewBox="0 0 24 24" fill="none" style={{ marginBottom: 16 }}>
+              <Path d="M12 2C6.48 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill={isDarkTheme ? '#334155' : '#CBD5E1'} />
+            </Svg>
+            <Text style={{ fontSize: 15, textAlign: 'center', color: dynamicStyles.labelColor }}>
+              You haven't applied for any jobs yet.
+            </Text>
+          </View>
+        ) : (
+          applications.map((app) => {
+            const statusStyle = getStatusStyles(app.status || 'applied');
+            const jobInfo = app.jobId || {};
+            const companyName = jobInfo.companyId?.name || 'Company';
+            const locationText = jobInfo.location || 'Remote';
+            
+            // Choose logo bg color based on company name
+            const code = companyName.charCodeAt(0) || 65;
+            const colors = ['#2563EB', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#EF4444'];
+            const logoColor = colors[code % colors.length];
+            const logoLetter = companyName.substring(0, 1).toUpperCase() + '.';
 
-              {/* Location Row */}
-              <View style={styles.locationRow}>
-                <PinIcon />
-                <Text style={[styles.locationText, { color: dynamicStyles.labelColor }]}>{app.location}</Text>
-              </View>
+            const tags = [jobInfo.jobType, jobInfo.locationType, jobInfo.experienceLevel].filter(Boolean);
 
-              {/* Tags Row */}
-              <View style={styles.tagsContainer}>
-                {app.tags.map((tag) => (
-                  <View key={tag} style={[styles.tagPill, { backgroundColor: dynamicStyles.tagBg }]}>
-                    <Text style={[styles.tagText, { color: dynamicStyles.tagTextColor }]}>{tag}</Text>
+            return (
+              <TouchableOpacity
+                key={app._id}
+                style={[styles.card, { backgroundColor: dynamicStyles.cardBg, borderColor: dynamicStyles.cardBorder }]}
+                onPress={() => onApplicationPress(app)}
+                activeOpacity={0.85}
+              >
+                {/* Top Row with Logo and Info */}
+                <View style={styles.cardHeader}>
+                  <View style={[styles.logoBox, { backgroundColor: logoColor }]}>
+                    <Text style={[styles.logoText, { color: '#FFFFFF' }]}>{logoLetter}</Text>
                   </View>
-                ))}
-              </View>
-            </View>
-          );
-        })}
+                  <View style={styles.roleContainer}>
+                    <Text style={[styles.roleTitle, { color: dynamicStyles.textColor }]}>{jobInfo.title || 'Position'}</Text>
+                    <Text style={[styles.companyText, { color: dynamicStyles.labelColor }]}>{companyName}</Text>
+                  </View>
+                  <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
+                    <Text style={[styles.statusText, { color: statusStyle.text }]}>{statusStyle.label}</Text>
+                  </View>
+                </View>
+
+                {/* Location Row */}
+                <View style={styles.locationRow}>
+                  <PinIcon />
+                  <Text style={[styles.locationText, { color: dynamicStyles.labelColor }]}>{locationText}</Text>
+                </View>
+
+                {/* Tags Row */}
+                {tags.length > 0 && (
+                  <View style={styles.tagsContainer}>
+                    {tags.map((tag) => (
+                      <View key={tag} style={[styles.tagPill, { backgroundColor: dynamicStyles.tagBg }]}>
+                        <Text style={[styles.tagText, { color: dynamicStyles.tagTextColor }]}>{tag}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </TouchableOpacity>
+            );
+          })
+        )}
         <View style={{ height: 40 }} />
       </ScrollView>
     </SafeAreaView>

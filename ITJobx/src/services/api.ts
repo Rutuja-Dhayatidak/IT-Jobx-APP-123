@@ -17,7 +17,9 @@ export async function apiRequest(endpoint: string, options: RequestInit = {}) {
   const url = `${BASE_URL}${endpoint}`;
   
   const headers = new Headers(options.headers || {});
-  headers.set('Content-Type', 'application/json');
+  if (!(options.body instanceof FormData)) {
+    headers.set('Content-Type', 'application/json');
+  }
   
   if (authToken) {
     headers.set('Authorization', `Bearer ${authToken}`);

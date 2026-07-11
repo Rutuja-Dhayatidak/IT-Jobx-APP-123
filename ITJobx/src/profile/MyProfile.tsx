@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -10,7 +10,14 @@ import {
   Dimensions,
   Platform,
   Modal,
+  Image,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
+import { authService } from '../services/authService';
+import { viewProfileService } from '../services/viewProfile';
+import { apiRequest } from '../services/api';
+import { pick, errorCodes, isErrorWithCode } from '@react-native-documents/picker';
 import Svg, { Path, Circle } from 'react-native-svg';
 import BottomNavigation from '../components/BottomNavigation';
 import FadeInView from '../components/FadeInView';
@@ -20,6 +27,7 @@ interface MyProfileProps {
   onSettingsPress?: () => void;
   isDarkTheme?: boolean;
   onNavigateTo?: (screen: any) => void;
+  onLogout?: () => void;
 }
 
 // Inline SVGs for all option items to avoid dependency issues
@@ -89,8 +97,79 @@ const LogoutIcon = ({ color = '#EF4444' }: { color?: string }) => (
   </Svg>
 );
 
-export default function MyProfile({ onBackPress, onNavigateToTab, onSettingsPress, isDarkTheme = true, onNavigateTo }: MyProfileProps) {
+export default function MyProfile({ onBackPress, onNavigateToTab, onSettingsPress, isDarkTheme = true, onNavigateTo, onLogout }: MyProfileProps) {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [profile, setProfile] = useState<any>(null);
+  const [profileImage, setProfileImage] = useState<string>('');
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [completionPercentage, setCompletionPercentage] = useState(0);
+
+  const loadProfile = async () => {
+    try {
+      const data = await viewProfileService.getProfile();
+      if (data && data.success) {
+        setProfile(data.profile.userId);
+        setProfileImage(data.profile.profileImage || '');
+        setCompletionPercentage(data.completionPercentage || 0);
+      }
+    } catch (err) {
+      console.error('Failed to load profile details in MyProfile:', err);
+    }
+  };
+
+  useEffect(() => {
+    loadProfile();
+  }, []);
+
+  const handleAvatarPick = async () => {
+    try {
+      const pickResults = await pick({
+        type: ['image/jpeg', 'image/png', 'image/jpg'],
+      });
+      const res = pickResults[0];
+      
+      setUploadingImage(true);
+      
+      const formData = new FormData();
+      formData.append('file', {
+        uri: Platform.OS === 'android' ? res.uri : res.uri.replace('file://', ''),
+        type: res.type || 'image/jpeg',
+        name: res.name || 'avatar.jpg',
+      } as any);
+
+      // Upload file to server
+      const uploadRes = await apiRequest('/upload/file', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (uploadRes && uploadRes.url) {
+        const imageUrl = uploadRes.url;
+        
+        // Save the image URL in the candidate's profile
+        const updateRes = await viewProfileService.updateProfile({ profileImage: imageUrl });
+        
+        if (updateRes && updateRes.success) {
+          setProfileImage(imageUrl);
+          // Reload profile statistics
+          await loadProfile();
+          Alert.alert('Success', 'Profile picture updated successfully!');
+        } else {
+          Alert.alert('Error', 'Failed to update profile picture in database.');
+        }
+      } else {
+        Alert.alert('Error', 'Failed to upload image file.');
+      }
+    } catch (err: any) {
+      if (isErrorWithCode(err) && err.code === errorCodes.OPERATION_CANCELED) {
+        console.log('User cancelled image picker');
+      } else {
+        Alert.alert('Error', err.message || 'Failed to select and upload image.');
+      }
+    } finally {
+      setUploadingImage(false);
+    }
+  };
 
   const profileOptions = [
     { title: 'Personal Information', icon: (color: string) => <UserOutlineIcon color={color} />, color: '#3B82F6', bgColor: 'rgba(59, 130, 246, 0.1)' },
@@ -108,7 +187,7 @@ export default function MyProfile({ onBackPress, onNavigateToTab, onSettingsPres
   const radius = 25;
   const strokeWidth = 5.5;
   const circumference = 2 * Math.PI * radius;
-  const progressOffset = circumference - (70 / 100) * circumference;
+  const progressOffset = circumference - (completionPercentage / 100) * circumference;
 
   const dynamicStyles = isDarkTheme ? darkStyles : lightStyles;
 
@@ -134,19 +213,37 @@ export default function MyProfile({ onBackPress, onNavigateToTab, onSettingsPres
 
         {/* Profile Card Container (Blue Gradient style) */}
         <View style={styles.profileCard}>
-          {/* Avatar Image Placeholder */}
-          <View style={styles.avatarWrapper}>
+          {/* Avatar Image Picker */}
+          <TouchableOpacity
+            style={styles.avatarWrapper}
+            activeOpacity={0.8}
+            onPress={handleAvatarPick}
+            disabled={uploadingImage}
+          >
             <View style={styles.avatarPlaceholder}>
-              {/* Profile silhouette */}
-              <Svg width={46} height={46} viewBox="0 0 24 24" fill="#FFFFFF">
-                <Path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+              {uploadingImage ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : profileImage ? (
+                <Image source={{ uri: profileImage }} style={styles.avatarImage} />
+              ) : (
+                /* Profile silhouette */
+                <Svg width={46} height={46} viewBox="0 0 24 24" fill="#FFFFFF">
+                  <Path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                </Svg>
+              )}
+            </View>
+            <View style={styles.editBadge}>
+              <Svg width={10} height={10} viewBox="0 0 24 24" fill="none">
+                <Path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a.996.996 0 000-1.41l-2.34-2.34a.996.996 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" fill="#FFFFFF" />
               </Svg>
             </View>
-          </View>
+          </TouchableOpacity>
 
           {/* User Details */}
           <View style={styles.profileDetails}>
-            <Text style={styles.profileName}>Marion Torphy</Text>
+            <Text style={styles.profileName}>
+              {profile ? `${profile.firstName || ''} ${profile.lastName || ''}`.trim() : 'Marion Torphy'}
+            </Text>
             <TouchableOpacity activeOpacity={0.7} onPress={() => onNavigateTo && onNavigateTo('your_profile')}>
               <Text style={styles.viewProfileText}>View Profile</Text>
             </TouchableOpacity>
@@ -177,7 +274,7 @@ export default function MyProfile({ onBackPress, onNavigateToTab, onSettingsPres
                 transform="rotate(-90 33 33)"
               />
               <View style={styles.progressTextContainer}>
-                <Text style={styles.progressPercentText}>70%</Text>
+                <Text style={styles.progressPercentText}>{completionPercentage}%</Text>
               </View>
             </Svg>
           </View>
@@ -202,6 +299,8 @@ export default function MyProfile({ onBackPress, onNavigateToTab, onSettingsPres
                 } else if (option.title === 'Language') {
                   // Navigate to languages screen
                   onNavigateTo && onNavigateTo('languages');
+                } else if (option.title === 'Privacy Policy') {
+                  onNavigateTo && onNavigateTo('privacy_policy');
                 } else if (option.title === 'Log out') {
                   setShowLogoutModal(true);
                 }
@@ -253,7 +352,11 @@ export default function MyProfile({ onBackPress, onNavigateToTab, onSettingsPres
                 activeOpacity={0.8}
                 onPress={() => {
                   setShowLogoutModal(false);
-                  onNavigateTo && onNavigateTo('onboarding');
+                  if (onLogout) {
+                    onLogout();
+                  } else {
+                    onNavigateTo && onNavigateTo('onboarding');
+                  }
                 }}
               >
                 <Text style={styles.logoutConfirmButtonText}>Yes, Logout</Text>
@@ -319,6 +422,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 2.5,
     borderColor: '#FFFFFF',
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 36,
+  },
+  editBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: '#3B82F6',
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#2563EB',
   },
   profileDetails: {
     flex: 1,

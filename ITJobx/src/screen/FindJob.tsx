@@ -8,10 +8,12 @@ import {
   SafeAreaView,
   StatusBar,
   ScrollView,
+  ActivityIndicator,
+  Platform,
 } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
-import BottomNavigation from '../components/BottomNavigation';
 import FadeInView from '../components/FadeInView';
+import { apiRequest } from '../services/api';
 
 interface FindJobProps {
   onBackPress?: () => void;
@@ -20,6 +22,8 @@ interface FindJobProps {
   onJobPress?: (job: any) => void;
   isDarkTheme?: boolean;
   initialTab?: 'available' | 'saved' | 'hire';
+  savedJobs?: any[];
+  onToggleSave?: (job: any) => void;
 }
 
 // Custom SVG Icons
@@ -56,20 +60,47 @@ const SlidersIcon = () => (
   </Svg>
 );
 
-const BookmarkIcon = ({ active }: { active: boolean }) => (
+const BookmarkIcon = ({ active, color = '#64748B' }: { active: boolean; color?: string }) => (
   <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
     <Path
       d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"
       fill={active ? '#2563EB' : 'none'}
-      stroke={active ? '#2563EB' : '#94A3B8'}
+      stroke={active ? '#2563EB' : color}
       strokeWidth="2"
     />
   </Svg>
 );
 
-export default function FindJob({ onBackPress, onNavigateToTab, onFilterPress, onJobPress, isDarkTheme = true, initialTab = 'available' }: FindJobProps) {
+const BriefcaseIcon = ({ color = '#2563EB' }) => (
+  <Svg width={13} height={13} viewBox="0 0 24 24" fill="none">
+    <Path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z" fill={color} />
+  </Svg>
+);
+
+const BuildingIcon = ({ color = '#8B5CF6' }) => (
+  <Svg width={13} height={13} viewBox="0 0 24 24" fill="none">
+    <Path d="M12 7V3H2v18h20V7H12zM6 19H4v-2h2v2zm0-4H4v-2h2v2zm0-4H4V9h2v2zm0-4H4V5h2v2zm6 12h-2v-2h2v2zm0-4h-2v-2h2v2zm0-4h-2V9h2v2zm0-4h-2V5h2v2zm10 12h-8v-2h2v-2h-2v-2h2v-2h-2V9h8v10zm-2-8h-2v2h2v-2zm0 4h-2v2h2v-2z" fill={color} />
+  </Svg>
+);
+
+const PinIcon = ({ color = '#64748B' }: { color?: string }) => (
+  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+    <Path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill={color} />
+  </Svg>
+);
+
+const UserGroupIcon = ({ color = '#64748B' }: { color?: string }) => (
+  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+    <Path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" fill={color} />
+  </Svg>
+);
+
+export default function FindJob({ onBackPress, onNavigateToTab, onFilterPress, onJobPress, isDarkTheme = true, initialTab = 'available', savedJobs = [], onToggleSave }: FindJobProps) {
   const [activeTab, setActiveTab] = useState<'available' | 'saved' | 'hire'>(initialTab);
   const [searchQuery, setSearchQuery] = useState('');
+  const [jobs, setJobs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (initialTab) {
@@ -77,55 +108,63 @@ export default function FindJob({ onBackPress, onNavigateToTab, onFilterPress, o
     }
   }, [initialTab]);
 
+  const fetchJobs = async (search = '') => {
+    try {
+      setLoading(true);
+      setError(null);
+      const url = search ? `/jobs/published?search=${encodeURIComponent(search)}` : '/jobs/published';
+      const data = await apiRequest(url, { method: 'GET' });
+      if (data && data.success) {
+        setJobs(data.jobs || []);
+      } else {
+        setError('Failed to fetch jobs');
+      }
+    } catch (err: any) {
+      console.error('Error fetching jobs:', err);
+      setError(err.message || 'Error fetching jobs');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchJobs(searchQuery);
+  }, [searchQuery]);
+
   const dynamicStyles = isDarkTheme ? darkStyles : lightStyles;
 
-  const jobsData = [
-    {
-      id: '1',
-      company: 'Figma',
-      location: 'San Francisco, USA',
-      role: 'React Developer',
-      salary: '$150/m',
-      time: '3 Days Ago',
-      applicants: '70 Applicants',
-      logo: <FigmaIcon />,
-      tags: ['Full Time', 'Remote', 'Mid-Senior Level'],
-      badge: '98% Match',
-      badgeBg: 'rgba(37, 99, 235, 0.1)',
-      badgeColor: '#2563EB',
-      saved: false,
-    },
-    {
-      id: '2',
-      company: 'Google',
-      location: 'California, USA',
-      role: 'UI/UX Designer',
-      salary: '$300/m',
-      time: '5 Days Ago',
-      applicants: '1k Applicants',
-      logo: <GoogleIcon />,
-      tags: ['Full Time', 'Remote', 'Internship'],
-      badge: 'Hot Job',
-      badgeBg: 'rgba(245, 158, 11, 0.1)',
-      badgeColor: '#F59E0B',
-      saved: false,
-    },
-    {
-      id: '3',
-      company: 'Amazon',
-      location: 'Washington, USA',
-      role: 'UI Designer',
-      salary: '$700/m',
-      time: '7 Days Ago',
-      applicants: '2k Applicants',
-      logo: <AmazonIcon />,
-      tags: ['Full Time', 'Remote', 'Entry Level'],
-      badge: 'Urgent',
-      badgeBg: 'rgba(239, 68, 68, 0.1)',
-      badgeColor: '#EF4444',
-      saved: true,
-    },
-  ];
+  const getTimeAgo = (dateString?: string) => {
+    if (!dateString) return 'Recent';
+    const date = new Date(dateString);
+    const now = new Date();
+    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+    if (seconds < 60) return 'Just now';
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    if (days === 1) return 'Yesterday';
+    return `${days}d ago`;
+  };
+
+  const getCompanyLogo = (companyName: string) => {
+    const name = companyName.toLowerCase();
+    if (name.includes('figma')) return <FigmaIcon />;
+    if (name.includes('google')) return <GoogleIcon />;
+    if (name.includes('amazon')) return <AmazonIcon />;
+    
+    // Choose a color palette based on name first char
+    const code = companyName.charCodeAt(0) || 65;
+    const colors = ['#2563EB', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#EF4444'];
+    const selectedColor = colors[code % colors.length];
+
+    return (
+      <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: selectedColor, justifyContent: 'center', alignItems: 'center' }}>
+        <Text style={{ color: '#FFF', fontSize: 12, fontWeight: '700' }}>{companyName.charAt(0).toUpperCase()}</Text>
+      </View>
+    );
+  };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: dynamicStyles.backgroundColor }]}>
@@ -141,11 +180,11 @@ export default function FindJob({ onBackPress, onNavigateToTab, onFilterPress, o
         >
           <Text style={[styles.backArrow, { color: dynamicStyles.textColor }]}>←</Text>
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: dynamicStyles.textColor }]}>Jobs</Text>
+        <Text style={[styles.headerTitle, { color: dynamicStyles.textColor }]}>Find Jobs</Text>
         
         {/* Styled Profile Initials Avatar for balance */}
-        <View style={styles.avatarContainer}>
-          <Text style={styles.avatarText}>M</Text>
+        <View style={[styles.avatarContainer, { backgroundColor: '#2563EB' }]}>
+          <Text style={styles.avatarText}>R</Text>
         </View>
       </View>
 
@@ -156,8 +195,8 @@ export default function FindJob({ onBackPress, onNavigateToTab, onFilterPress, o
             <Text style={styles.searchIcon}>🔍</Text>
             <TextInput
               style={[styles.searchInput, { color: dynamicStyles.textColor }]}
-              placeholder="Search For Jobs"
-              placeholderTextColor="#94A3B8"
+              placeholder="Search for your dream job..."
+              placeholderTextColor={isDarkTheme ? '#64748B' : '#94A3B8'}
               value={searchQuery}
               onChangeText={setSearchQuery}
             />
@@ -178,7 +217,7 @@ export default function FindJob({ onBackPress, onNavigateToTab, onFilterPress, o
             onPress={() => setActiveTab('available')}
             activeOpacity={0.8}
           >
-            <Text style={[styles.tabText, activeTab === 'available' ? { color: '#2563EB', fontWeight: 'bold' } : { color: dynamicStyles.labelColor }]}>
+            <Text style={[styles.tabText, activeTab === 'available' ? { color: '#2563EB', fontWeight: '700' } : { color: dynamicStyles.labelColor, fontWeight: '600' }]}>
               Available
             </Text>
           </TouchableOpacity>
@@ -188,7 +227,7 @@ export default function FindJob({ onBackPress, onNavigateToTab, onFilterPress, o
             onPress={() => setActiveTab('saved')}
             activeOpacity={0.8}
           >
-            <Text style={[styles.tabText, activeTab === 'saved' ? { color: '#2563EB', fontWeight: 'bold' } : { color: dynamicStyles.labelColor }]}>
+            <Text style={[styles.tabText, activeTab === 'saved' ? { color: '#2563EB', fontWeight: '700' } : { color: dynamicStyles.labelColor, fontWeight: '600' }]}>
               Saved
             </Text>
           </TouchableOpacity>
@@ -198,7 +237,7 @@ export default function FindJob({ onBackPress, onNavigateToTab, onFilterPress, o
             onPress={() => setActiveTab('hire')}
             activeOpacity={0.8}
           >
-            <Text style={[styles.tabText, activeTab === 'hire' ? { color: '#2563EB', fontWeight: 'bold' } : { color: dynamicStyles.labelColor }]}>
+            <Text style={[styles.tabText, activeTab === 'hire' ? { color: '#2563EB', fontWeight: '700' } : { color: dynamicStyles.labelColor, fontWeight: '600' }]}>
               Hire
             </Text>
           </TouchableOpacity>
@@ -206,63 +245,160 @@ export default function FindJob({ onBackPress, onNavigateToTab, onFilterPress, o
 
         {/* Jobs List */}
         <View style={styles.jobsList}>
-          {jobsData.map((job) => (
-            <TouchableOpacity
-              key={job.id}
-              style={[
-                styles.jobCard,
-                {
-                  backgroundColor: dynamicStyles.cardBg,
-                  borderColor: dynamicStyles.cardBorder,
-                  shadowColor: isDarkTheme ? '#000000' : '#64748B',
-                },
-              ]}
-              onPress={() => onJobPress && onJobPress(job)}
-              activeOpacity={0.9}
-            >
-              {/* Card Top Details */}
-              <View style={styles.cardHeader}>
-                <View style={[styles.logoWrapper, { backgroundColor: isDarkTheme ? '#1E293B' : '#F8FAFC', borderColor: isDarkTheme ? 'rgba(255,255,255,0.05)' : '#E2E8F0' }]}>
-                  {job.logo}
-                </View>
-                <View style={styles.companyDetails}>
-                  <Text style={[styles.companyName, { color: dynamicStyles.textColor }]}>{job.company}</Text>
-                  <Text style={styles.locationText}>📍 {job.location}</Text>
-                </View>
+          {loading ? (
+            <ActivityIndicator size="large" color="#2563EB" style={{ marginTop: 40 }} />
+          ) : error ? (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          ) : jobs.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Svg width={80} height={80} viewBox="0 0 24 24" fill="none" style={{ marginBottom: 16 }}>
+                <Path d="M12 2C6.48 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill={isDarkTheme ? '#334155' : '#CBD5E1'} />
+              </Svg>
+              <Text style={[styles.emptyText, { color: dynamicStyles.labelColor }]}>No jobs found matching your criteria</Text>
+            </View>
+          ) : (
+            jobs.map((job) => {
+              const companyName = job.companyId?.name || 'Company';
+              const locationText = job.location || 'Remote';
+              const roleTitle = job.title;
+              const salaryText = job.salaryBudget ? `${job.salaryBudget}` : 'N/A';
+              const isYearly = salaryText.toLowerCase().includes('lpa') || 
+                               salaryText.toLowerCase().includes('pa') || 
+                               salaryText.toLowerCase().includes('annum') || 
+                               salaryText.toLowerCase().includes('lakh') || 
+                               salaryText.toLowerCase().includes('yr') || 
+                               salaryText.toLowerCase().includes('year');
+              const timeAgo = getTimeAgo(job.publishedAt || job.createdAt);
+              const applicantsText = `${job.applyCount || 0} Applicants`;
+              const tags = [job.jobType, job.locationType, job.experienceLevel].filter(Boolean);
+              
+              const isFeatured = job.isFeatured;
+              const badgeText = isFeatured ? 'Featured' : (job.planTier || 'Hot');
+              const badgeBg = isFeatured ? 'rgba(245, 158, 11, 0.12)' : 'rgba(37, 99, 235, 0.12)';
+              const badgeColor = isFeatured ? '#F59E0B' : '#2563EB';
+              const isSaved = savedJobs.some((j) => (j._id || j.id) === job._id);
 
-                {/* Match/Urgent Badge + Bookmark */}
-                <View style={styles.badgeRow}>
-                  <View style={[styles.statusBadge, { backgroundColor: job.badgeBg }]}>
-                    <Text style={[styles.statusBadgeText, { color: job.badgeColor }]}>{job.badge}</Text>
+              return (
+                <TouchableOpacity
+                  key={job._id}
+                  style={[
+                    styles.jobCard,
+                    {
+                      backgroundColor: dynamicStyles.cardBg,
+                      borderColor: dynamicStyles.cardBorder,
+                      shadowColor: isDarkTheme ? '#000000' : '#E2E8F0',
+                    },
+                  ]}
+                  onPress={() => {
+                    if (onJobPress) {
+                      onJobPress({
+                        ...job,
+                        role: roleTitle,
+                        company: companyName,
+                        location: locationText,
+                        salary: isYearly ? salaryText : (salaryText.includes('/m') ? salaryText : `${salaryText}/m`),
+                        tags: [
+                          job.jobType || 'Full-time',
+                          job.locationType || 'remote',
+                          job.experienceLevel || 'Mid Level'
+                        ]
+                      });
+                    }
+                  }}
+                  activeOpacity={0.95}
+                >
+                  {/* Card Main details (Logo and Info Column) */}
+                  <View style={styles.cardMainInfo}>
+                    <View style={[styles.logoWrapper, { backgroundColor: isDarkTheme ? '#1E293B' : '#F8FAFC', borderColor: isDarkTheme ? 'rgba(255,255,255,0.06)' : '#E2E8F0' }]}>
+                      {getCompanyLogo(companyName)}
+                    </View>
+                    
+                    <View style={styles.infoColumn}>
+                      {/* Title & Right Actions (Status badge + Bookmark) */}
+                      <View style={styles.titleRow}>
+                        <Text style={[styles.roleTitle, { color: dynamicStyles.textColor }]} numberOfLines={1}>
+                          {roleTitle}
+                        </Text>
+                        <View style={styles.rightActions}>
+                          <View style={[styles.statusBadge, { backgroundColor: badgeBg }]}>
+                            <Text style={[styles.statusBadgeText, { color: badgeColor }]}>{badgeText}</Text>
+                          </View>
+                          <TouchableOpacity 
+                            activeOpacity={0.7} 
+                            style={styles.bookmarkButton}
+                            onPress={() => onToggleSave && onToggleSave(job)}
+                          >
+                            <BookmarkIcon active={isSaved} color={isSaved ? '#2563EB' : dynamicStyles.labelColor} />
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+
+                      {/* Company Name */}
+                      <Text style={[styles.companyName, { color: dynamicStyles.labelColor }]}>
+                        {companyName}
+                      </Text>
+
+                      {/* Metadata Row (Location • Applicants) */}
+                      <View style={styles.metaRow}>
+                        <View style={styles.metaItem}>
+                          <PinIcon color={dynamicStyles.labelColor} />
+                          <Text style={[styles.metaText, { color: dynamicStyles.labelColor }]}>{locationText}</Text>
+                        </View>
+                        <Text style={[styles.metaDot, { color: dynamicStyles.labelColor }]}>•</Text>
+                        <View style={styles.metaItem}>
+                          <UserGroupIcon color={dynamicStyles.labelColor} />
+                          <Text style={[styles.metaText, { color: dynamicStyles.labelColor }]}>{applicantsText}</Text>
+                        </View>
+                      </View>
+                    </View>
                   </View>
-                  <TouchableOpacity activeOpacity={0.7} style={styles.bookmarkButton}>
-                    <BookmarkIcon active={job.saved} />
-                  </TouchableOpacity>
-                </View>
-              </View>
 
-              {/* Role & Salary */}
-              <View style={styles.roleRow}>
-                <Text style={[styles.roleTitle, { color: dynamicStyles.textColor }]}>{job.role}</Text>
-                <Text style={styles.salaryText}>{job.salary}<Text style={styles.salaryPeriod}>/m</Text></Text>
-              </View>
+                  {/* Divider line */}
+                  <View style={[styles.cardDivider, { backgroundColor: dynamicStyles.dividerColor }]} />
 
-              {/* Metadata Subtext */}
-              <View style={styles.subtextRow}>
-                <Text style={styles.timeText}>📅 {job.time}</Text>
-                <Text style={styles.applicantsText}>👥 {job.applicants}</Text>
-              </View>
+                  {/* Bottom Row - Tags & Salary */}
+                  <View style={styles.bottomRow}>
+                    <View style={styles.tagsContainer}>
+                      {tags.slice(0, 2).map((tag, i) => {
+                        const cleanTag = tag.trim().toLowerCase();
+                        let bg = isDarkTheme ? 'rgba(255, 255, 255, 0.05)' : '#F1F5F9';
+                        let color = isDarkTheme ? '#94A3B8' : '#475569';
+                        let icon = null;
 
-              {/* Tags Row */}
-              <View style={styles.tagsContainer}>
-                {job.tags.map((tag, i) => (
-                  <View key={i} style={[styles.tagPill, { backgroundColor: isDarkTheme ? 'rgba(255, 255, 255, 0.05)' : '#F1F5F9' }]}>
-                    <Text style={[styles.tagText, { color: isDarkTheme ? '#94A3B8' : '#475569' }]}>{tag}</Text>
+                        if (cleanTag === 'full-time' || cleanTag === 'part-time' || cleanTag === 'contract') {
+                          bg = isDarkTheme ? 'rgba(37, 99, 235, 0.15)' : 'rgba(37, 99, 235, 0.08)';
+                          color = '#2563EB';
+                          icon = <BriefcaseIcon color={color} />;
+                        } else if (cleanTag === 'hybrid' || cleanTag === 'remote' || cleanTag === 'on-site' || cleanTag === 'onsite') {
+                          bg = isDarkTheme ? 'rgba(139, 92, 246, 0.15)' : 'rgba(139, 92, 246, 0.08)';
+                          color = '#8B5CF6';
+                          icon = <BuildingIcon color={color} />;
+                        }
+
+                        return (
+                          <View key={i} style={[styles.tagPill, { backgroundColor: bg }]}>
+                            {icon}
+                            <Text style={[styles.tagText, { color, marginLeft: icon ? 4 : 0 }]}>{tag}</Text>
+                          </View>
+                        );
+                      })}
+                    </View>
+                    
+                    <View style={styles.salaryContainer}>
+                      <Text style={[styles.salaryText, { color: isDarkTheme ? '#FFFFFF' : '#0F172A' }]}>
+                        {salaryText}
+                      </Text>
+                      <Text style={[styles.salarySubtext, { color: dynamicStyles.labelColor }]}>
+                        {isYearly ? 'per annum' : 'per month'}
+                      </Text>
+                    </View>
                   </View>
-                ))}
-              </View>
-            </TouchableOpacity>
-          ))}
+                </TouchableOpacity>
+              );
+            })
+          )}
         </View>
         <View style={{ height: 110 }} />
       </ScrollView>
@@ -282,7 +418,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 24,
-    marginTop: 10,
+    marginTop: Platform.OS === 'ios' ? 24 : 36,
     marginBottom: 10,
   },
   backButton: {
@@ -305,9 +441,13 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#2563EB',
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 3,
   },
   avatarText: {
     color: '#FFFFFF',
@@ -325,7 +465,7 @@ const styles = StyleSheet.create({
   },
   searchBar: {
     flex: 1,
-    height: 52,
+    height: 54,
     borderWidth: 1,
     borderRadius: 16,
     flexDirection: 'row',
@@ -340,19 +480,25 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 15,
+    paddingVertical: 8,
   },
   filterButton: {
-    width: 52,
-    height: 52,
+    width: 54,
+    height: 54,
     borderRadius: 16,
-    backgroundColor: '#2563EB', // Premium royal blue filter icon background
+    backgroundColor: '#2563EB',
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   tabsWrapper: {
     flexDirection: 'row',
     marginHorizontal: 24,
-    padding: 6,
+    padding: 5,
     borderRadius: 30,
     marginBottom: 24,
   },
@@ -364,33 +510,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   activeTabItem: {
-    shadowColor: '#2563EB',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.08,
+    shadowRadius: 5,
+    elevation: 3,
   },
   tabText: {
     fontSize: 14,
-    fontWeight: 'bold',
   },
   jobsList: {
     paddingHorizontal: 24,
   },
   jobCard: {
-    borderRadius: 24,
-    padding: 20,
-    marginBottom: 18,
-    borderWidth: 1,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 3,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    borderRadius: 16,
+    padding: 16,
     marginBottom: 16,
+    borderWidth: 1,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.03,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  cardMainInfo: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
   },
   logoWrapper: {
     width: 48,
@@ -399,86 +543,119 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
-    borderWidth: 1.5,
+    borderWidth: 1,
   },
-  companyDetails: {
+  infoColumn: {
     flex: 1,
   },
-  companyName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 3,
-  },
-  locationText: {
-    fontSize: 12,
-    color: '#94A3B8',
-  },
-  badgeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 12,
-    marginRight: 8,
-  },
-  statusBadgeText: {
-    fontSize: 11,
-    fontWeight: 'bold',
-  },
-  bookmarkButton: {
-    padding: 4,
-  },
-  roleRow: {
+  titleRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
   },
   roleTitle: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: 'bold',
     flex: 1,
-    marginRight: 10,
+    marginRight: 8,
   },
-  salaryText: {
-    fontSize: 17,
-    fontWeight: 'bold',
-    color: '#22C55E', // Green salary
-  },
-  salaryPeriod: {
-    fontSize: 12,
-    color: '#94A3B8',
-  },
-  subtextRow: {
+  rightActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
   },
-  timeText: {
-    fontSize: 12,
-    color: '#94A3B8',
-    marginRight: 14,
+  companyName: {
+    fontSize: 13,
+    fontWeight: '500',
+    marginTop: 2,
   },
-  applicantsText: {
+  bookmarkButton: {
+    padding: 4,
+    marginLeft: 8,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6,
+    flexWrap: 'wrap',
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  metaText: {
     fontSize: 12,
-    color: '#94A3B8',
+    fontWeight: '500',
+    marginLeft: 4,
+  },
+  metaDot: {
+    marginHorizontal: 8,
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  statusBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  cardDivider: {
+    height: 1,
+    marginVertical: 12,
+  },
+  bottomRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   tagsContainer: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    gap: 8,
   },
   tagPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    marginRight: 8,
-    marginBottom: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   tagText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
+  },
+  salaryContainer: {
+    flexDirection: 'column',
+    alignItems: 'flex-end',
+  },
+  salaryText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  salarySubtext: {
+    fontSize: 11,
+    marginTop: 2,
+  },
+  errorContainer: {
+    alignItems: 'center',
+    marginTop: 40,
+    padding: 20,
+  },
+  errorText: {
+    color: '#EF4444',
+    fontSize: 15,
+    textAlign: 'center',
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    marginTop: 60,
+    paddingHorizontal: 20,
+  },
+  emptyText: {
+    fontSize: 15,
+    textAlign: 'center',
+    lineHeight: 22,
   },
 });
 
@@ -487,23 +664,24 @@ const darkStyles = {
   textColor: '#FFFFFF',
   labelColor: '#94A3B8',
   tabsBg: '#131A2E',
-  dividerColor: 'rgba(255, 255, 255, 0.05)',
+  dividerColor: 'rgba(255, 255, 255, 0.06)',
   buttonBg: '#131A2E',
   buttonBorder: 'rgba(255, 255, 255, 0.05)',
-  cardBg: '#131A2E',
-  cardBorder: 'rgba(255, 255, 255, 0.05)',
+  cardBg: '#1E293B', // Modern Slate-800 dark gray card background
+  cardBorder: '#334155', // Slate-700 border for sharp premium contrast
   activeTabBg: '#1E293B',
 };
 
 const lightStyles = {
   backgroundColor: '#F8FAFC',
   textColor: '#0F172A',
-  labelColor: '#64748B',
+  labelColor: '#475569',
   tabsBg: '#EFF2F6',
-  dividerColor: '#F1F5F9',
+  dividerColor: '#E2E8F0',
   buttonBg: '#FFFFFF',
   buttonBorder: '#E2E8F0',
   cardBg: '#FFFFFF',
   cardBorder: '#E2E8F0',
   activeTabBg: '#FFFFFF',
 };
+

@@ -57,15 +57,17 @@ const AppleIcon = () => (
 );
 
 export default function Register({ onLoginPress, onBackPress, onRegisterSuccess }: RegisterProps) {
-  const [name, setName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [secureText, setSecureText] = useState(true);
   const [agree, setAgree] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleSignUp = async () => {
-    if (!name.trim() || !email.trim() || !password.trim()) {
+    if (!firstName.trim() || !lastName.trim() || !email.trim() || !phone.trim() || !password.trim()) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
@@ -76,14 +78,11 @@ export default function Register({ onLoginPress, onBackPress, onRegisterSuccess 
 
     setLoading(true);
     try {
-      const nameParts = name.trim().split(" ");
-      const firstName = nameParts[0] || "";
-      const lastName = nameParts.slice(1).join(" ") || "";
-      
       await authService.register({
-        firstName,
-        lastName,
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
         email: email.trim().toLowerCase(),
+        phone: phone.trim(),
         password,
       });
 
@@ -126,15 +125,27 @@ export default function Register({ onLoginPress, onBackPress, onRegisterSuccess 
 
           {/* Form Fields */}
           <View style={styles.form}>
-            {/* Name Field */}
+            {/* First Name Field */}
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Name</Text>
+              <Text style={styles.label}>First Name</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Esther Howard"
+                placeholder="Esther"
                 placeholderTextColor="#64748B"
-                value={name}
-                onChangeText={setName}
+                value={firstName}
+                onChangeText={setFirstName}
+              />
+            </View>
+
+            {/* Last Name Field */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Last Name</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Howard"
+                placeholderTextColor="#64748B"
+                value={lastName}
+                onChangeText={setLastName}
               />
             </View>
 
@@ -149,6 +160,19 @@ export default function Register({ onLoginPress, onBackPress, onRegisterSuccess 
                 autoCapitalize="none"
                 value={email}
                 onChangeText={setEmail}
+              />
+            </View>
+
+            {/* Phone Number Field */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Phone Number</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="+918767605792"
+                placeholderTextColor="#64748B"
+                keyboardType="phone-pad"
+                value={phone}
+                onChangeText={setPhone}
               />
             </View>
 

@@ -11,6 +11,7 @@ import {
   Dimensions,
   Platform,
   Animated,
+  Image,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import BottomNavigation from '../components/BottomNavigation';
@@ -29,6 +30,92 @@ interface HomeProps {
   isDarkTheme?: boolean;
   userLocation?: string;
 }
+
+const GoogleLogo = () => (
+  <Svg width={32} height={32} viewBox="0 0 24 24">
+    <Path
+      fill="#4285F4"
+      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+    />
+    <Path
+      fill="#34A853"
+      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+    />
+    <Path
+      fill="#FBBC05"
+      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l3.66-2.85z"
+    />
+    <Path
+      fill="#EA4335"
+      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.85c.87-2.6 3.3-4.53 6.16-4.53z"
+    />
+  </Svg>
+);
+
+const MicrosoftLogo = () => (
+  <Svg width={32} height={32} viewBox="0 0 23 23">
+    <Path fill="#F25022" d="M1 1h10v10H1z" />
+    <Path fill="#7FBA00" d="M12 1h10v10H12z" />
+    <Path fill="#00A4EF" d="M1 12h10v10H1z" />
+    <Path fill="#FFB900" d="M12 12h10v10H12z" />
+  </Svg>
+);
+
+const AmazonLogo = () => (
+  <Svg width={32} height={32} viewBox="0 0 256 256">
+    <Path d="M117.3 186.7c-21.7 0-38.3-15-38.3-42.3c0-30 20.7-41.5 53.6-41.5h24.8v10.5c0 14-4 29.5-22.3 29.5c-9.6 0-16-4.5-16-12c0-8.5 7.4-12.8 20.2-12.8h11.2v-5.4H129c-16 0-24 5.3-24 16.5c0 10.3 7 15.3 17 15.3c15 0 22-9.6 24.8-19.2v24.8c-7.3 10-18.4 16.6-29.5 16.6zm72-88v88h-32.3v-10c-7.3 10-18.4 15.6-30.7 15.6c-26.6 0-46.7-18.5-46.7-48.4c0-31 23-48.4 67-48.4H189V84c0-12.5-6.7-22-23.7-22c-12 0-24.8 5-32.3 10.5l-10-23.8c11-9 28.3-14.7 49-14.7c39 0 49.3 22 49.3 54.3v70.8z" fill="#000" />
+    <Path d="M42.3 223c52 30.6 122.5 30.6 174 0c5.3-3.2 1.4-9.3-4.5-6.6c-47 21-118 21-165 0c-6-2.7-9.8 3.4-4.5 6.6z" fill="#FF9900" />
+    <Path d="M219.7 206.5c-4.2-4.5-19.4 1.7-27.4 6.2c-2.3 1.3-1.8 3.5.7 4c8.4 2 20.5 2.7 23.6-1.5c3.2-4.3-.2-15.6-4.5-21c-1.6-2.1-3.6-.9-3 1.2c2.2 7.7-.6 19.3-3 22.3c-2.4 3 6.3-3.5 13.6-11.2z" fill="#FF9900" />
+  </Svg>
+);
+
+const IbmLogo = () => (
+  <Svg width={32} height={32} viewBox="0 0 24 24">
+    <Path d="M2 4h4v2H2V4zm6 0h2v2H8V4zm4 0h6v2h-6V4zm8 0h2v2h-2V4zM2 7h4v2H2V7zm6 0h2v2H8V7zm4 0h6v2h-6V7zm8 0h2v2h-2V7zM2 10h4v2H2v-2zm6 0h2v2H8v-2zm4 0h6v2h-6v-2zm8 0h2v2h-2v-2zM2 13h4v2H2v-2zm6 0h2v2H8v-2zm4 0h6v2h-6v-2zm8 0h2v2h-2v-2zM2 16h4v2H2v-2zm6 0h2v2H8v-2zm4 0h6v2h-6v-2zm8 0h2v2h-2v-2z" fill="#0F62FE" />
+  </Svg>
+);
+
+const CiscoLogo = () => (
+  <Svg width={32} height={32} viewBox="0 0 24 24">
+    <Path d="M4 11h1v2H4zm2-2h1v6H6zm2-2h1v10H8zm2-2h1v14H10zm2 0h1v14H12zm2-2h1v14H14zm2 2h1v10H16zm2 2h1v6H18zm2 2h1v2H20z" fill="#049FD9" />
+  </Svg>
+);
+
+const CodeIcon = () => (
+  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+    <Path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z" fill="#FFFFFF" />
+  </Svg>
+);
+
+const PaintbrushIcon = () => (
+  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+    <Path d="M12 3a9 9 0 0 0 0 18c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z" fill="#FFFFFF" />
+  </Svg>
+);
+
+const BugIcon = () => (
+  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+    <Path d="M20 8h-2.81c-.45-.78-1.07-1.45-1.82-1.96L17 4.41 15.59 3l-2.17 2.17C12.96 5.06 12.49 5 12 5c-.49 0-.96.06-1.41.17L8.41 3 7 4.41l1.62 1.63C7.88 6.55 7.26 7.22 6.81 8H4v2h2.09c-.05.33-.09.66-.09 1v1H4v2h2v1c0 .34.04.67.09 1H4v2h2.81c1.04 1.79 2.97 3 5.19 3s4.15-1.21 5.19-3H20v-2h-2.09c.05-.33.09-.66.09-1v-1h2v-2h-2v-1c0-.34-.04-.67-.09-1H20V8zm-6 8h-4v-2h4v2zm0-4h-4v-2h4v2z" fill="#FFFFFF" />
+  </Svg>
+);
+
+const ChartIcon = () => (
+  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+    <Path d="M5 9.2h3V19H5zM10.6 5h2.8v14h-2.8zM16.2 13H19v6h-2.8z" fill="#FFFFFF" />
+  </Svg>
+);
+
+const MegaphoneIcon = () => (
+  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+    <Path d="M12 8c-1.1 0-2 .9-2 2v4c0 1.1.9 2 2 2h1l3 3V5l-3 3h-1zm7.5 4c0-1.8-1.2-3.3-2.8-3.8v7.6c1.6-.5 2.8-2 2.8-3.8zM4 9h4v6H4V9z" fill="#FFFFFF" />
+  </Svg>
+);
+
+const UserIcon = () => (
+  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+    <Path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" fill="#FFFFFF" />
+  </Svg>
+);
 
 export default function Home({
   onNotificationPress,
@@ -145,6 +232,107 @@ export default function Home({
     },
   ];
 
+  // Dummy top companies data
+  const topCompanies = [
+    {
+      id: '1',
+      name: 'Google',
+      openings: 12,
+      logoColor: '#4285F4',
+      logoComponent: <GoogleLogo />
+    },
+    {
+      id: '2',
+      name: 'Microsoft',
+      openings: 8,
+      logoColor: '#F25022',
+      logoComponent: <MicrosoftLogo />
+    },
+    {
+      id: '3',
+      name: 'Amazon',
+      openings: 10,
+      logoColor: '#FF9900',
+      logoComponent: <AmazonLogo />
+    },
+    {
+      id: '4',
+      name: 'IBM',
+      openings: 6,
+      logoColor: '#0F62FE',
+      logoComponent: <IbmLogo />
+    },
+    {
+      id: '5',
+      name: 'Cisco',
+      openings: 5,
+      logoColor: '#049FD9',
+      logoComponent: <CiscoLogo />
+    }
+  ];
+
+  // Dummy job categories data
+  const jobCategories = [
+    {
+      id: 'c1',
+      name: 'Software\nDevelopment',
+      icon: <CodeIcon />,
+      bgColor: '#6366F1'
+    },
+    {
+      id: 'c2',
+      name: 'UI/UX\nDesign',
+      icon: <PaintbrushIcon />,
+      bgColor: '#EC4899'
+    },
+    {
+      id: 'c3',
+      name: 'Testing &\nQA',
+      icon: <BugIcon />,
+      bgColor: '#10B981'
+    },
+    {
+      id: 'c4',
+      name: 'Data\nScience',
+      icon: <ChartIcon />,
+      bgColor: '#F59E0B'
+    },
+    {
+      id: 'c5',
+      name: 'Digital\nMarketing',
+      icon: <MegaphoneIcon />,
+      bgColor: '#3B82F6'
+    },
+    {
+      id: 'c6',
+      name: 'HR &\nRecruitment',
+      icon: <UserIcon />,
+      bgColor: '#8B5CF6'
+    }
+  ];
+
+  // Dummy career tips & resources data
+  const careerResources = [
+    {
+      id: 'cr1',
+      title: 'How to prepare for a\ntechnical interview',
+      image: require('../assets/technical_interview.png'),
+      readTime: '5 min read'
+    },
+    {
+      id: 'cr2',
+      title: 'Tips to build a\nstrong resume',
+      image: require('../assets/resume_building.png'),
+      readTime: '6 min read'
+    },
+    {
+      id: 'cr3',
+      title: 'Top in-demand skills\nin 2024',
+      image: require('../assets/indemand_skills.png'),
+      readTime: '4 min read'
+    }
+  ];
+
   const dynamicStyles = isDarkTheme ? darkStyles : lightStyles;
 
   return (
@@ -152,232 +340,352 @@ export default function Home({
       <StatusBar barStyle="light-content" backgroundColor="#1E3A8A" />
       <FadeInView style={{ flex: 1 }}>
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Blue Header Section */}
-        <Animated.View style={[styles.headerSection, { opacity: fadeAnim, transform: [{ translateY: translateYHeader }] }]}>
-          <View style={styles.headerTopRow}>
-            {/* Location Selector */}
-            <TouchableOpacity style={styles.locationContainer} activeOpacity={0.7}>
-              <View style={styles.locationIconWrapper}>
-                <Svg width={18} height={18} viewBox="0 0 24 24" fill="#F59E0B">
-                  <Path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
-                </Svg>
-              </View>
-              <View style={styles.locationTextContainer}>
-                <Text style={styles.locationLabel}>Location</Text>
-                <View style={styles.locationValueRow}>
-                  <Text style={styles.locationValue}>{userLocation || 'New York, USA'}</Text>
-                  <Text style={styles.arrowDown}>⏷</Text>
+          {/* Blue Header Section */}
+          <Animated.View style={[styles.headerSection, { opacity: fadeAnim, transform: [{ translateY: translateYHeader }] }]}>
+            <View style={styles.headerTopRow}>
+              {/* Location Selector */}
+              <TouchableOpacity style={styles.locationContainer} activeOpacity={0.7}>
+                <View style={styles.locationIconWrapper}>
+                  <Svg width={18} height={18} viewBox="0 0 24 24" fill="#F59E0B">
+                    <Path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                  </Svg>
                 </View>
-              </View>
-            </TouchableOpacity>
+                <View style={styles.locationTextContainer}>
+                  <Text style={styles.locationLabel}>Location</Text>
+                  <View style={styles.locationValueRow}>
+                    <Text style={styles.locationValue}>{userLocation || 'New York, USA'}</Text>
+                    <Text style={styles.arrowDown}>⏷</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
 
-            {/* Notification Badge */}
-            <TouchableOpacity
-              style={styles.notificationButton}
-              onPress={onNotificationPress}
-              activeOpacity={0.7}
-            >
-              <Svg width={24} height={24} viewBox="0 0 24 24" fill="#FFFFFF">
-                <Path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1-1.5-1s-1.5.17-1.5 1v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" />
-              </Svg>
-              <View style={styles.notificationDot} />
-            </TouchableOpacity>
-          </View>
-
-          {/* Search & Filter Row */}
-          <View style={styles.searchFilterRow}>
-            {/* Search Input */}
-            <View style={styles.searchBar}>
-              <Text style={styles.searchIcon}>🔍</Text>
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Search"
-                placeholderTextColor="#94A3B8"
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-              />
+              {/* Notification Badge */}
+              <TouchableOpacity
+                style={styles.notificationButton}
+                onPress={onNotificationPress}
+                activeOpacity={0.7}
+              >
+                <Svg width={24} height={24} viewBox="0 0 24 24" fill="#FFFFFF">
+                  <Path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1-1.5-1s-1.5.17-1.5 1v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" />
+                </Svg>
+                <View style={styles.notificationDot} />
+              </TouchableOpacity>
             </View>
 
-            {/* Yellow Filter Button */}
-            <TouchableOpacity
-              style={styles.filterButton}
-              onPress={onFilterPress}
-              activeOpacity={0.8}
-            >
-              <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-                <Path
-                  d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"
-                  fill="#0F172A"
+            {/* Search & Filter Row */}
+            <View style={styles.searchFilterRow}>
+              {/* Search Input */}
+              <View style={styles.searchBar}>
+                <Text style={styles.searchIcon}>🔍</Text>
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Search"
+                  placeholderTextColor="#94A3B8"
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
                 />
-              </Svg>
-            </TouchableOpacity>
-          </View>
-        </Animated.View>
+              </View>
 
-        {/* Suggested Jobs Section */}
-        <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: translateYContent }] }}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: dynamicStyles.textColor }]}>Suggested Jobs</Text>
-            <TouchableOpacity onPress={onSeeAllSuggested} activeOpacity={0.7}>
-              <Text style={styles.seeAllText}>See all</Text>
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.horizontalScroll}
-          >
-            {suggestedJobs.map((job) => (
+              {/* Yellow Filter Button */}
               <TouchableOpacity
-                key={job.id}
-                style={[styles.jobCard, { backgroundColor: dynamicStyles.cardBg, borderColor: dynamicStyles.cardBorder }]}
-                onPress={() => onJobPress && onJobPress(job)}
-                activeOpacity={0.9}
+                style={styles.filterButton}
+                onPress={onFilterPress}
+                activeOpacity={0.8}
               >
-                <View style={styles.jobCardHeader}>
-                  <View style={[styles.companyLogo, { backgroundColor: job.logoBg }]}>
-                    <Text style={styles.companyLogoText}>{job.logo}</Text>
-                  </View>
-                  <View style={styles.jobTitleWrapper}>
-                    <Text style={[styles.jobTitle, { color: dynamicStyles.textColor }]}>{job.title}</Text>
-                    <Text style={styles.companyName}>{job.company}</Text>
-                  </View>
-                  <TouchableOpacity style={styles.bookmarkButton} activeOpacity={0.7}>
-                    <Svg width={20} height={20} viewBox="0 0 24 24" fill="#2563EB">
-                      <Path d="M17 3H7c-1.1 0-1.99.9-1.99 2L5 21l7-3 7 3V5c0-1.1-.9-2-2-2z" />
-                    </Svg>
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.locationRow}>
-                  <Text style={styles.locationPin}>📍</Text>
-                  <Text style={styles.cardLocationText}>{job.location}</Text>
-                </View>
-
-                <View style={styles.tagsContainer}>
-                  <View style={[styles.tagBadge, { backgroundColor: dynamicStyles.tagBg }]}>
-                    <Text style={[styles.tagText, { color: dynamicStyles.tagTextColor }]}>{job.type}</Text>
-                  </View>
-                  <View style={[styles.tagBadge, { backgroundColor: dynamicStyles.tagBg }]}>
-                    <Text style={[styles.tagText, { color: dynamicStyles.tagTextColor }]}>{job.workplace}</Text>
-                  </View>
-                  <View style={[styles.tagBadge, { backgroundColor: dynamicStyles.tagBg }]}>
-                    <Text style={[styles.tagText, { color: dynamicStyles.tagTextColor }]}>{job.experience}</Text>
-                  </View>
-                </View>
-
-                <View style={styles.jobCardFooter}>
-                  <View style={styles.applicantsWrapper}>
-                    <View style={styles.avatarStack}>
-                      <View style={[styles.miniAvatar, { backgroundColor: '#F43F5E', zIndex: 3, borderColor: dynamicStyles.avatarBorder }]} />
-                      <View style={[styles.miniAvatar, { backgroundColor: '#3B82F6', zIndex: 2, marginLeft: -8, borderColor: dynamicStyles.avatarBorder }]} />
-                      <View style={[styles.miniAvatar, { backgroundColor: '#10B981', zIndex: 1, marginLeft: -8, borderColor: dynamicStyles.avatarBorder }]} />
-                    </View>
-                    <Text style={styles.applicantsText}>{job.applicants} Applicants</Text>
-                  </View>
-                  <Text style={styles.salaryText}>
-                    {job.salary}
-                    <Text style={styles.salaryUnit}>/month</Text>
-                  </Text>
-                </View>
+                <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+                  <Path
+                    d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"
+                    fill="#0F172A"
+                  />
+                </Svg>
               </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </Animated.View>
+            </View>
+          </Animated.View>
 
-        {/* Recent Jobs Section */}
-        <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: translateYRecent }] }}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: dynamicStyles.textColor }]}>Recent Jobs</Text>
-            <TouchableOpacity onPress={onSeeAllRecent} activeOpacity={0.7}>
-              <Text style={styles.seeAllText}>See all</Text>
-            </TouchableOpacity>
-          </View>
+          {/* Suggested Jobs Section */}
+          <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: translateYContent }] }}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: dynamicStyles.textColor }]}>Suggested Jobs</Text>
+              <TouchableOpacity onPress={onSeeAllSuggested} activeOpacity={0.7}>
+                <Text style={styles.seeAllText}>See all</Text>
+              </TouchableOpacity>
+            </View>
 
-          {/* Category Pill Selectors */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.categoriesContainer}
-          >
-            {categories.map((cat) => {
-              const isActive = activeCategory === cat;
-              return (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.horizontalScroll}
+            >
+              {suggestedJobs.map((job) => (
                 <TouchableOpacity
-                  key={cat}
-                  style={[
-                    styles.categoryPill,
-                    { backgroundColor: dynamicStyles.pillBg, borderColor: dynamicStyles.pillBorder },
-                    isActive && styles.categoryPillActive,
-                  ]}
-                  onPress={() => setActiveCategory(cat)}
-                  activeOpacity={0.7}
+                  key={job.id}
+                  style={[styles.jobCard, { backgroundColor: dynamicStyles.cardBg, borderColor: dynamicStyles.cardBorder }]}
+                  onPress={() => onJobPress && onJobPress(job)}
+                  activeOpacity={0.9}
                 >
-                  <Text
-                    style={[
-                      styles.categoryPillText,
-                      { color: dynamicStyles.pillText },
-                      isActive && styles.categoryPillTextActive,
-                    ]}
-                  >
-                    {cat}
-                  </Text>
+                  <View style={styles.jobCardHeader}>
+                    <View style={[styles.companyLogo, { backgroundColor: job.logoBg }]}>
+                      <Text style={styles.companyLogoText}>{job.logo}</Text>
+                    </View>
+                    <View style={styles.jobTitleWrapper}>
+                      <Text style={[styles.jobTitle, { color: dynamicStyles.textColor }]}>{job.title}</Text>
+                      <Text style={styles.companyName}>{job.company}</Text>
+                    </View>
+                    <TouchableOpacity style={styles.bookmarkButton} activeOpacity={0.7}>
+                      <Svg width={20} height={20} viewBox="0 0 24 24" fill="#2563EB">
+                        <Path d="M17 3H7c-1.1 0-1.99.9-1.99 2L5 21l7-3 7 3V5c0-1.1-.9-2-2-2z" />
+                      </Svg>
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={styles.locationRow}>
+                    <Text style={styles.locationPin}>📍</Text>
+                    <Text style={styles.cardLocationText}>{job.location}</Text>
+                  </View>
+
+                  <View style={styles.tagsContainer}>
+                    <View style={[styles.tagBadge, { backgroundColor: dynamicStyles.tagBg }]}>
+                      <Text style={[styles.tagText, { color: dynamicStyles.tagTextColor }]}>{job.type}</Text>
+                    </View>
+                    <View style={[styles.tagBadge, { backgroundColor: dynamicStyles.tagBg }]}>
+                      <Text style={[styles.tagText, { color: dynamicStyles.tagTextColor }]}>{job.workplace}</Text>
+                    </View>
+                    <View style={[styles.tagBadge, { backgroundColor: dynamicStyles.tagBg }]}>
+                      <Text style={[styles.tagText, { color: dynamicStyles.tagTextColor }]}>{job.experience}</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.jobCardFooter}>
+                    <View style={styles.applicantsWrapper}>
+                      <View style={styles.avatarStack}>
+                        <View style={[styles.miniAvatar, { backgroundColor: '#F43F5E', zIndex: 3, borderColor: dynamicStyles.avatarBorder }]} />
+                        <View style={[styles.miniAvatar, { backgroundColor: '#3B82F6', zIndex: 2, marginLeft: -8, borderColor: dynamicStyles.avatarBorder }]} />
+                        <View style={[styles.miniAvatar, { backgroundColor: '#10B981', zIndex: 1, marginLeft: -8, borderColor: dynamicStyles.avatarBorder }]} />
+                      </View>
+                      <Text style={styles.applicantsText}>{job.applicants} Applicants</Text>
+                    </View>
+                    <Text style={styles.salaryText}>
+                      {job.salary}
+                      <Text style={styles.salaryUnit}>/month</Text>
+                    </Text>
+                  </View>
                 </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
+              ))}
+            </ScrollView>
+          </Animated.View>
 
-          {/* Recent Jobs List */}
-          <View style={styles.recentJobsContainer}>
-            {recentJobs.map((job) => (
-              <TouchableOpacity
-                key={job.id}
-                style={[styles.recentJobCard, { backgroundColor: dynamicStyles.cardBg, borderColor: dynamicStyles.cardBorder }]}
-                onPress={() => onJobPress && onJobPress(job)}
-                activeOpacity={0.9}
-              >
-                <View style={styles.recentJobHeader}>
-                  <View style={[styles.recentCompanyLogo, { backgroundColor: job.logoBg }]}>
-                    <Text style={styles.recentCompanyLogoText}>{job.logo}</Text>
-                  </View>
-                  <View style={styles.recentJobInfo}>
-                    <Text style={[styles.recentJobTitle, { color: dynamicStyles.textColor }]}>{job.title}</Text>
-                    <Text style={styles.recentCompanyName}>{job.company}</Text>
-                  </View>
-                  <TouchableOpacity style={styles.bookmarkButton} activeOpacity={0.7}>
-                    <Svg width={18} height={18} viewBox="0 0 24 24" fill="#2563EB">
-                      <Path d="M17 3H7c-1.1 0-1.99.9-1.99 2L5 21l7-3 7 3V5c0-1.1-.9-2-2-2z" />
-                    </Svg>
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.recentTagsContainer}>
-                  <View style={[styles.recentTagBadge, { backgroundColor: dynamicStyles.tagBg }]}>
-                    <Text style={[styles.recentTagText, { color: dynamicStyles.tagTextColor }]}>{job.type}</Text>
-                  </View>
-                  <View style={[styles.recentTagBadge, { backgroundColor: dynamicStyles.tagBg }]}>
-                    <Text style={[styles.recentTagText, { color: dynamicStyles.tagTextColor }]}>{job.workplace}</Text>
-                  </View>
-                  <View style={[styles.recentTagBadge, { backgroundColor: dynamicStyles.tagBg }]}>
-                    <Text style={[styles.recentTagText, { color: dynamicStyles.tagTextColor }]}>{job.experience}</Text>
-                  </View>
-                </View>
-
-                <View style={styles.recentJobFooter}>
-                  <Text style={styles.recentLocation}>📍 {job.location}</Text>
-                  <Text style={styles.recentSalary}>{job.salary}</Text>
-                </View>
+          {/* Top Companies Hiring Section */}
+          <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: translateYContent }], marginTop: 12, marginBottom: 12 }}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: dynamicStyles.textColor }]}>Top Companies Hiring</Text>
+              <TouchableOpacity activeOpacity={0.7}>
+                <Text style={styles.seeAllText}>See all</Text>
               </TouchableOpacity>
-            ))}
-          </View>
-        </Animated.View>
+            </View>
 
-        {/* Safe spacing for bottom navigation */}
-        <View style={{ height: 100 }} />
-      </ScrollView>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.horizontalScroll}
+            >
+              {topCompanies.map((company) => (
+                <TouchableOpacity
+                  key={company.id}
+                  style={[styles.companyCard, { backgroundColor: dynamicStyles.cardBg, borderColor: dynamicStyles.cardBorder }]}
+                  activeOpacity={0.8}
+                >
+                  <View style={styles.companyCardContent}>
+                    <View style={styles.companyCardLogoWrapper}>
+                      {company.logoComponent}
+                    </View>
+                    <Text style={[styles.companyCardName, { color: dynamicStyles.textColor }]} numberOfLines={1}>
+                      {company.name}
+                    </Text>
+                    <Text style={styles.companyOpenings}>
+                      {company.openings} Openings
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </Animated.View>
 
-      {/* Bottom Navigation */}
+          {/* Browse Jobs by Category Section */}
+          <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: translateYContent }], marginTop: 12, marginBottom: 12 }}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: dynamicStyles.textColor }]}>Browse Jobs by Category</Text>
+            </View>
+
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.horizontalScroll}
+            >
+              {/* Render categories in columns of 2 cards each to match the 2-row mockup grid */}
+              {Array.from({ length: Math.ceil(jobCategories.length / 2) }).map((_, colIndex) => {
+                const item1 = jobCategories[colIndex * 2];
+                const item2 = jobCategories[colIndex * 2 + 1];
+
+                return (
+                  <View key={`col-${colIndex}`} style={styles.categoryColumn}>
+                    {item1 && (
+                      <TouchableOpacity
+                        style={[styles.categoryCard, { backgroundColor: dynamicStyles.cardBg, borderColor: dynamicStyles.cardBorder }]}
+                        activeOpacity={0.8}
+                      >
+                        <View style={[styles.categoryIconWrapper, { backgroundColor: item1.bgColor }]}>
+                          {item1.icon}
+                        </View>
+                        <Text style={[styles.categoryCardName, { color: dynamicStyles.textColor }]} numberOfLines={2}>
+                          {item1.name}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                    {item2 && (
+                      <TouchableOpacity
+                        style={[styles.categoryCard, { backgroundColor: dynamicStyles.cardBg, borderColor: dynamicStyles.cardBorder }]}
+                        activeOpacity={0.8}
+                      >
+                        <View style={[styles.categoryIconWrapper, { backgroundColor: item2.bgColor }]}>
+                          {item2.icon}
+                        </View>
+                        <Text style={[styles.categoryCardName, { color: dynamicStyles.textColor }]} numberOfLines={2}>
+                          {item2.name}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                );
+              })}
+            </ScrollView>
+          </Animated.View>
+
+          {/* Recent Jobs Section */}
+          <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: translateYRecent }] }}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: dynamicStyles.textColor }]}>Recent Jobs</Text>
+              <TouchableOpacity onPress={onSeeAllRecent} activeOpacity={0.7}>
+                <Text style={styles.seeAllText}>See all</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Category Pill Selectors */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.categoriesContainer}
+            >
+              {categories.map((cat) => {
+                const isActive = activeCategory === cat;
+                return (
+                  <TouchableOpacity
+                    key={cat}
+                    style={[
+                      styles.categoryPill,
+                      { backgroundColor: dynamicStyles.pillBg, borderColor: dynamicStyles.pillBorder },
+                      isActive && styles.categoryPillActive,
+                    ]}
+                    onPress={() => setActiveCategory(cat)}
+                    activeOpacity={0.7}
+                  >
+                    <Text
+                      style={[
+                        styles.categoryPillText,
+                        { color: dynamicStyles.pillText },
+                        isActive && styles.categoryPillTextActive,
+                      ]}
+                    >
+                      {cat}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            {/* Recent Jobs List */}
+            <View style={styles.recentJobsContainer}>
+              {recentJobs.map((job) => (
+                <TouchableOpacity
+                  key={job.id}
+                  style={[styles.recentJobCard, { backgroundColor: dynamicStyles.cardBg, borderColor: dynamicStyles.cardBorder }]}
+                  onPress={() => onJobPress && onJobPress(job)}
+                  activeOpacity={0.9}
+                >
+                  <View style={styles.recentJobHeader}>
+                    <View style={[styles.recentCompanyLogo, { backgroundColor: job.logoBg }]}>
+                      <Text style={styles.recentCompanyLogoText}>{job.logo}</Text>
+                    </View>
+                    <View style={styles.recentJobInfo}>
+                      <Text style={[styles.recentJobTitle, { color: dynamicStyles.textColor }]}>{job.title}</Text>
+                      <Text style={styles.recentCompanyName}>{job.company}</Text>
+                    </View>
+                    <TouchableOpacity style={styles.bookmarkButton} activeOpacity={0.7}>
+                      <Svg width={18} height={18} viewBox="0 0 24 24" fill="#2563EB">
+                        <Path d="M17 3H7c-1.1 0-1.99.9-1.99 2L5 21l7-3 7 3V5c0-1.1-.9-2-2-2z" />
+                      </Svg>
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={styles.recentTagsContainer}>
+                    <View style={[styles.recentTagBadge, { backgroundColor: dynamicStyles.tagBg }]}>
+                      <Text style={[styles.recentTagText, { color: dynamicStyles.tagTextColor }]}>{job.type}</Text>
+                    </View>
+                    <View style={[styles.recentTagBadge, { backgroundColor: dynamicStyles.tagBg }]}>
+                      <Text style={[styles.recentTagText, { color: dynamicStyles.tagTextColor }]}>{job.workplace}</Text>
+                    </View>
+                    <View style={[styles.recentTagBadge, { backgroundColor: dynamicStyles.tagBg }]}>
+                      <Text style={[styles.recentTagText, { color: dynamicStyles.tagTextColor }]}>{job.experience}</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.recentJobFooter}>
+                    <Text style={styles.recentLocation}>📍 {job.location}</Text>
+                    <Text style={styles.recentSalary}>{job.salary}</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </Animated.View>
+
+          {/* Career Tips & Resources Section */}
+          <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: translateYRecent }], marginTop: 12, marginBottom: 20 }}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: dynamicStyles.textColor }]}>Career Tips & Resources</Text>
+              <TouchableOpacity activeOpacity={0.7}>
+                <Text style={styles.seeAllText}>See all</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.horizontalScroll}
+            >
+              {careerResources.map((resource) => (
+                <TouchableOpacity
+                  key={resource.id}
+                  style={[styles.resourceCard, { backgroundColor: dynamicStyles.cardBg, borderColor: dynamicStyles.cardBorder }]}
+                  activeOpacity={0.9}
+                >
+                  <Image source={resource.image} style={styles.resourceImage} resizeMode="cover" />
+                  <View style={styles.resourceDetails}>
+                    <Text style={[styles.resourceTitle, { color: dynamicStyles.textColor }]} numberOfLines={2}>
+                      {resource.title}
+                    </Text>
+                    <Text style={styles.resourceReadTime}>
+                      {resource.readTime}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </Animated.View>
+
+          {/* Safe spacing for bottom navigation */}
+          <View style={{ height: 100 }} />
+        </ScrollView>
+
+        {/* Bottom Navigation */}
       </FadeInView>
     </SafeAreaView>
   );
@@ -700,6 +1008,113 @@ const styles = StyleSheet.create({
     color: '#2563EB',
     fontWeight: 'bold',
     fontSize: 14,
+  },
+  companyCard: {
+    width: 120,
+    height: 145,
+    borderRadius: 18,
+    borderWidth: 1,
+    padding: 10,
+    marginRight: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 1,
+  },
+  companyCardContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+  },
+  companyCardLogoWrapper: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  companyCardName: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  companyOpenings: {
+    fontSize: 11,
+    color: '#64748B',
+    textAlign: 'center',
+  },
+  categoryColumn: {
+    flexDirection: 'column',
+  },
+  categoryCard: {
+    width: 205,
+    height: 78,
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 12,
+    marginRight: 12,
+    marginBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 1,
+  },
+  categoryIconWrapper: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  categoryCardName: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    flex: 1,
+  },
+  resourceCard: {
+    width: 220,
+    height: 215,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginRight: 12,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+    marginBottom: 10,
+  },
+  resourceImage: {
+    width: '100%',
+    height: 125,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+  },
+  resourceDetails: {
+    padding: 12,
+  },
+  resourceTitle: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    lineHeight: 18,
+    marginBottom: 6,
+  },
+  resourceReadTime: {
+    fontSize: 11,
+    color: '#94A3B8',
   },
 });
 

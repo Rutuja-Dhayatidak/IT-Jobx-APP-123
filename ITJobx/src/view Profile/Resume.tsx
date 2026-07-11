@@ -1,14 +1,21 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   View,
   Text,
+  TextInput,
   TouchableOpacity,
   SafeAreaView,
   StatusBar,
   ScrollView,
+  Alert,
+  ActivityIndicator,
+  Platform,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
+import { viewProfileService } from '../services/viewProfile';
+import { jobService } from '../services/job';
+import { pick, errorCodes, isErrorWithCode } from '@react-native-documents/picker';
 
 interface ResumeProps {
   onBackPress: () => void;
@@ -23,6 +30,78 @@ const UploadIcon = () => (
 );
 
 export default function Resume({ onBackPress, isDarkTheme = true }: ResumeProps) {
+  const [resumeUrl, setResumeUrl] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const data = await viewProfileService.getProfile();
+        if (data && data.success && data.profile) {
+          setResumeUrl(data.profile.resumeUrl || '');
+        }
+      } catch (err: any) {
+        console.error('Error fetching resume:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProfile();
+  }, []);
+
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      const data = await viewProfileService.updateProfile({ resumeUrl });
+      if (data && data.success) {
+        Alert.alert('Success', 'Resume updated successfully!');
+        onBackPress();
+      } else {
+        Alert.alert('Error', 'Failed to update resume.');
+      }
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to update resume.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDocumentPick = async () => {
+    try {
+      const pickResults = await pick({
+        type: ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/msword'],
+      });
+      const res = pickResults[0];
+      
+      setSaving(true);
+      
+      const formData = new FormData();
+      formData.append('file', {
+        uri: Platform.OS === 'android' ? res.uri : res.uri.replace('file://', ''),
+        type: res.type || 'application/pdf',
+        name: res.name || 'resume.pdf',
+      } as any);
+
+      const uploadRes = await jobService.uploadResume(formData);
+
+      if (uploadRes && uploadRes.success) {
+        setResumeUrl(uploadRes.resumeUrl);
+        Alert.alert('Success', 'Resume uploaded and profile updated successfully!');
+      } else {
+        Alert.alert('Error', 'Failed to upload resume to server.');
+      }
+    } catch (err: any) {
+      if (isErrorWithCode(err) && err.code === errorCodes.OPERATION_CANCELED) {
+        console.log('User cancelled document picker');
+      } else {
+        Alert.alert('Error', err.message || 'Failed to select and upload document.');
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const dynamicStyles = isDarkTheme ? darkStyles : lightStyles;
 
   return (
@@ -43,22 +122,59 @@ export default function Resume({ onBackPress, isDarkTheme = true }: ResumeProps)
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Upload Box */}
-        <View style={styles.inputGroup}>
-          <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>Upload Resume/CV</Text>
-          <TouchableOpacity
-            style={[styles.uploadBox, { backgroundColor: dynamicStyles.inputBg, borderColor: dynamicStyles.inputBorder }]}
-            activeOpacity={0.8}
-          >
-            <UploadIcon />
-            <Text style={[styles.uploadText, { color: dynamicStyles.textColor }]}>Browse File</Text>
-          </TouchableOpacity>
-        </View>
+        {loading ? (
+          <ActivityIndicator size="large" color="#2563EB" style={{ marginTop: 40 }} />
+        ) : (
+          <>
+            {/* Upload Box */}
+            <View style={styles.inputGroup}>
+              <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>Upload Resume/CV</Text>
+              <TouchableOpacity
+                style={[styles.uploadBox, { backgroundColor: dynamicStyles.inputBg, borderColor: dynamicStyles.inputBorder }]}
+                activeOpacity={0.8}
+                onPress={handleDocumentPick}
+              >
+                <UploadIcon />
+                <Text style={[styles.uploadText, { color: dynamicStyles.textColor }]}>Browse File</Text>
+              </TouchableOpacity>
+            </View>
 
-        {/* Save Button */}
-        <TouchableOpacity style={styles.saveButton} activeOpacity={0.8} onPress={onBackPress}>
-          <Text style={styles.saveButtonText}>Save</Text>
-        </TouchableOpacity>
+            {/* Resume URL TextInput */}
+            <View style={styles.inputGroup}>
+              <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>Or Paste Resume/CV Link</Text>
+              <TextInput
+                style={{
+                  height: 52,
+                  borderRadius: 12,
+                  paddingHorizontal: 16,
+                  fontSize: 15,
+                  borderWidth: 1,
+                  backgroundColor: dynamicStyles.inputBg,
+                  color: dynamicStyles.textColor,
+                  borderColor: dynamicStyles.inputBorder
+                }}
+                value={resumeUrl}
+                onChangeText={setResumeUrl}
+                placeholder="Enter Resume URL"
+                placeholderTextColor={isDarkTheme ? '#64748B' : '#94A3B8'}
+              />
+            </View>
+
+            {/* Save Button */}
+            <TouchableOpacity 
+              style={[styles.saveButton, saving && { opacity: 0.7 }]} 
+              activeOpacity={0.8} 
+              onPress={handleSave}
+              disabled={saving}
+            >
+              {saving ? (
+                <ActivityIndicator color="#FFFFFF" size="small" />
+              ) : (
+                <Text style={styles.saveButtonText}>Save</Text>
+              )}
+            </TouchableOpacity>
+          </>
+        )}
 
         <View style={{ height: 40 }} />
       </ScrollView>

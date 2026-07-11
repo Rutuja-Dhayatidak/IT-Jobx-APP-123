@@ -1,5 +1,8 @@
 {
   "buildFiles": [
+    "C:\\ITApp\\ITJobx\\node_modules\\@react-native-async-storage\\async-storage\\android\\build\\generated\\source\\codegen\\jni\\CMakeLists.txt",
+    "C:\\ITApp\\ITJobx\\node_modules\\@react-native-documents\\picker\\android\\build\\generated\\source\\codegen\\jni\\CMakeLists.txt",
+    "C:\\ITApp\\ITJobx\\node_modules\\lottie-react-native\\android\\build\\generated\\source\\codegen\\jni\\CMakeLists.txt",
     "C:\\ITApp\\ITJobx\\node_modules\\react-native-safe-area-context\\android\\src\\main\\jni\\CMakeLists.txt",
     "C:\\ITApp\\ITJobx\\node_modules\\react-native-svg\\android\\src\\main\\jni\\CMakeLists.txt",
     "C:\\ITApp\\ITJobx\\node_modules\\react-native\\ReactAndroid\\cmake-utils\\default-app-setup\\CMakeLists.txt"
@@ -31,6 +34,21 @@
         "C:\\Users\\ADMIN\\.gradle\\caches\\9.3.1\\transforms\\2b7c23aa4547eb79508e5d3aa3f2bc7a\\workspace\\transformed\\react-android-0.86.0-debug\\prefab\\modules\\jsi\\libs\\android.x86_64\\libjsi.so",
         "C:\\Users\\ADMIN\\.gradle\\caches\\9.3.1\\transforms\\2b7c23aa4547eb79508e5d3aa3f2bc7a\\workspace\\transformed\\react-android-0.86.0-debug\\prefab\\modules\\reactnative\\libs\\android.x86_64\\libreactnative.so"
       ]
+    },
+    "react_codegen_AsyncStorageSpec::@15af80695a6281ecf900": {
+      "toolchain": "toolchain",
+      "abi": "x86_64",
+      "artifactName": "react_codegen_AsyncStorageSpec"
+    },
+    "react_codegen_lottiereactnative::@0fa4dc904d7e359a99fb": {
+      "toolchain": "toolchain",
+      "abi": "x86_64",
+      "artifactName": "react_codegen_lottiereactnative"
+    },
+    "react_codegen_rndocumentpickerCGen::@aac1846a245ca418eb66": {
+      "toolchain": "toolchain",
+      "abi": "x86_64",
+      "artifactName": "react_codegen_rndocumentpickerCGen"
     },
     "react_codegen_rnsvg::@4f40eb209d0c0b4a3b65": {
       "toolchain": "toolchain",

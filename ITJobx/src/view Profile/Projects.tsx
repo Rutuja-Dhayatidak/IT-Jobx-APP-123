@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -11,8 +11,11 @@ import {
   Switch,
   KeyboardAvoidingView,
   Platform,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
+import { viewProfileService } from '../services/viewProfile';
 
 interface ProjectsProps {
   onBackPress: () => void;
@@ -44,6 +47,9 @@ export default function Projects({ onBackPress, isDarkTheme = true }: ProjectsPr
   const [liveUrl, setLiveUrl] = useState('Select');
   const [description, setDescription] = useState('');
 
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
   const [showFromDropdown, setShowFromDropdown] = useState(false);
   const [showToDropdown, setShowToDropdown] = useState(false);
   const [showContributorsDropdown, setShowContributorsDropdown] = useState(false);
@@ -54,6 +60,85 @@ export default function Projects({ onBackPress, isDarkTheme = true }: ProjectsPr
   const contributorsList = ['Only Me', '2 members', '3 members', 'Select'];
   const associatedList = ['BrioSoft solutions', 'Imaginaria University', 'Select'];
   const urlList = ['https://example.com/project', 'https://github.com/project', 'Select'];
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const data = await viewProfileService.getProfile();
+        if (data && data.success && data.profile && data.profile.projects && data.profile.projects.length > 0) {
+          const proj = data.profile.projects[0];
+          setProjectName(proj.title || '');
+          if (proj.description && proj.description.includes(' | ')) {
+            const parts = proj.description.split(' | ');
+            setRole(parts[0]);
+            setDescription(parts.slice(1).join(' | '));
+          } else {
+            setDescription(proj.description || '');
+          }
+          setLiveUrl(proj.link || 'Select');
+        }
+      } catch (err: any) {
+        console.error('Error fetching projects:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProfile();
+  }, []);
+
+  const handleSave = async () => {
+    if (!projectName) {
+      Alert.alert('Error', 'Project Name is required.');
+      return;
+    }
+    try {
+      setSaving(true);
+      const updatedProj = {
+        title: projectName,
+        description: role ? `${role} | ${description}` : description,
+        link: liveUrl !== 'Select' ? liveUrl : '',
+      };
+      const data = await viewProfileService.updateProfile({ projects: [updatedProj] });
+      if (data && data.success) {
+        Alert.alert('Success', 'Project updated successfully!');
+        onBackPress();
+      } else {
+        Alert.alert('Error', 'Failed to update project.');
+      }
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to update project.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    Alert.alert(
+      'Confirm Delete',
+      'Are you sure you want to delete this project entry?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setSaving(true);
+              const data = await viewProfileService.updateProfile({ projects: [] });
+              if (data && data.success) {
+                Alert.alert('Deleted', 'Project entry removed.');
+                onBackPress();
+              }
+            } catch (err: any) {
+              Alert.alert('Error', err.message || 'Failed to delete project.');
+            } finally {
+              setSaving(false);
+            }
+          }
+        }
+      ]
+    );
+  };
 
   const dynamicStyles = isDarkTheme ? darkStyles : lightStyles;
 
@@ -71,172 +156,191 @@ export default function Projects({ onBackPress, isDarkTheme = true }: ProjectsPr
             <Text style={[styles.backArrow, { color: dynamicStyles.textColor }]}>←</Text>
           </TouchableOpacity>
           <Text style={[styles.headerTitle, { color: dynamicStyles.textColor }]}>Projects</Text>
-          <TouchableOpacity style={[styles.deleteButton, { borderColor: dynamicStyles.buttonBorder }]} activeOpacity={0.7}>
+          <TouchableOpacity 
+            style={[styles.deleteButton, { borderColor: dynamicStyles.buttonBorder }]} 
+            activeOpacity={0.7}
+            onPress={handleDelete}
+          >
             <TrashIcon />
           </TouchableOpacity>
         </View>
 
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          {/* Project Name */}
-          <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>Project Name</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: dynamicStyles.inputBg, color: dynamicStyles.textColor, borderColor: dynamicStyles.inputBorder }]}
-              value={projectName}
-              onChangeText={setProjectName}
-              placeholder="Project Name"
-              placeholderTextColor={isDarkTheme ? '#64748B' : '#94A3B8'}
-            />
-          </View>
+          {loading ? (
+            <ActivityIndicator size="large" color="#2563EB" style={{ marginTop: 40 }} />
+          ) : (
+            <>
+              {/* Project Name */}
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>Project Name</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: dynamicStyles.inputBg, color: dynamicStyles.textColor, borderColor: dynamicStyles.inputBorder }]}
+                  value={projectName}
+                  onChangeText={setProjectName}
+                  placeholder="Project Name"
+                  placeholderTextColor={isDarkTheme ? '#64748B' : '#94A3B8'}
+                />
+              </View>
 
-          {/* Role */}
-          <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>Role</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: dynamicStyles.inputBg, color: dynamicStyles.textColor, borderColor: dynamicStyles.inputBorder }]}
-              value={role}
-              onChangeText={setRole}
-              placeholder="Role"
-              placeholderTextColor={isDarkTheme ? '#64748B' : '#94A3B8'}
-            />
-          </View>
+              {/* Role */}
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>Role</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: dynamicStyles.inputBg, color: dynamicStyles.textColor, borderColor: dynamicStyles.inputBorder }]}
+                  value={role}
+                  onChangeText={setRole}
+                  placeholder="Role"
+                  placeholderTextColor={isDarkTheme ? '#64748B' : '#94A3B8'}
+                />
+              </View>
 
-          {/* Dates Row */}
-          <View style={styles.row}>
-            <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-              <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>From</Text>
-              <TouchableOpacity
-                style={[styles.dropdownButton, { backgroundColor: dynamicStyles.inputBg, borderColor: dynamicStyles.inputBorder }]}
-                onPress={() => setShowFromDropdown(!showFromDropdown)}
-              >
-                <Text style={{ color: dynamicStyles.textColor }}>{fromMonth}</Text>
-                <ChevronIcon color={isDarkTheme ? '#64748B' : '#94A3B8'} />
-              </TouchableOpacity>
-              {showFromDropdown && (
-                <View style={[styles.dropdownMenu, { backgroundColor: dynamicStyles.dropdownBg, borderColor: dynamicStyles.inputBorder }]}>
-                  {months.map((m) => (
-                    <TouchableOpacity key={m} style={styles.dropdownItem} onPress={() => { setFromMonth(m); setShowFromDropdown(false); }}>
-                      <Text style={{ color: dynamicStyles.textColor }}>{m}</Text>
-                    </TouchableOpacity>
-                  ))}
+              {/* Dates Row */}
+              <View style={styles.row}>
+                <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
+                  <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>From</Text>
+                  <TouchableOpacity
+                    style={[styles.dropdownButton, { backgroundColor: dynamicStyles.inputBg, borderColor: dynamicStyles.inputBorder }]}
+                    onPress={() => setShowFromDropdown(!showFromDropdown)}
+                  >
+                    <Text style={{ color: dynamicStyles.textColor }}>{fromMonth}</Text>
+                    <ChevronIcon color={isDarkTheme ? '#64748B' : '#94A3B8'} />
+                  </TouchableOpacity>
+                  {showFromDropdown && (
+                    <View style={[styles.dropdownMenu, { backgroundColor: dynamicStyles.dropdownBg, borderColor: dynamicStyles.inputBorder }]}>
+                      {months.map((m) => (
+                        <TouchableOpacity key={m} style={styles.dropdownItem} onPress={() => { setFromMonth(m); setShowFromDropdown(false); }}>
+                          <Text style={{ color: dynamicStyles.textColor }}>{m}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
                 </View>
-              )}
-            </View>
 
-            <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
-              <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>To</Text>
-              <TouchableOpacity
-                style={[styles.dropdownButton, { backgroundColor: dynamicStyles.inputBg, borderColor: dynamicStyles.inputBorder }]}
-                onPress={() => setShowToDropdown(!showToDropdown)}
-              >
-                <Text style={{ color: dynamicStyles.textColor }}>{toMonth}</Text>
-                <ChevronIcon color={isDarkTheme ? '#64748B' : '#94A3B8'} />
-              </TouchableOpacity>
-              {showToDropdown && (
-                <View style={[styles.dropdownMenu, { backgroundColor: dynamicStyles.dropdownBg, borderColor: dynamicStyles.inputBorder }]}>
-                  {months.map((m) => (
-                    <TouchableOpacity key={m} style={styles.dropdownItem} onPress={() => { setToMonth(m); setShowToDropdown(false); }}>
-                      <Text style={{ color: dynamicStyles.textColor }}>{m}</Text>
-                    </TouchableOpacity>
-                  ))}
+                <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
+                  <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>To</Text>
+                  <TouchableOpacity
+                    style={[styles.dropdownButton, { backgroundColor: dynamicStyles.inputBg, borderColor: dynamicStyles.inputBorder }]}
+                    onPress={() => setShowToDropdown(!showToDropdown)}
+                  >
+                    <Text style={{ color: dynamicStyles.textColor }}>{toMonth}</Text>
+                    <ChevronIcon color={isDarkTheme ? '#64748B' : '#94A3B8'} />
+                  </TouchableOpacity>
+                  {showToDropdown && (
+                    <View style={[styles.dropdownMenu, { backgroundColor: dynamicStyles.dropdownBg, borderColor: dynamicStyles.inputBorder }]}>
+                      {months.map((m) => (
+                        <TouchableOpacity key={m} style={styles.dropdownItem} onPress={() => { setToMonth(m); setShowToDropdown(false); }}>
+                          <Text style={{ color: dynamicStyles.textColor }}>{m}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
                 </View>
-              )}
-            </View>
-          </View>
-
-          {/* Working on this project toggle */}
-          <View style={styles.toggleRow}>
-            <Text style={[styles.toggleLabel, { color: dynamicStyles.textColor }]}>Working on this project</Text>
-            <Switch
-              value={workingOnProject}
-              onValueChange={setWorkingOnProject}
-              trackColor={{ false: '#767577', true: '#2563EB' }}
-              thumbColor={workingOnProject ? '#FFFFFF' : '#f4f3f4'}
-            />
-          </View>
-
-          {/* Contributors */}
-          <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>Contributors</Text>
-            <TouchableOpacity
-              style={[styles.dropdownButton, { backgroundColor: dynamicStyles.inputBg, borderColor: dynamicStyles.inputBorder }]}
-              onPress={() => setShowContributorsDropdown(!showContributorsDropdown)}
-            >
-              <Text style={{ color: dynamicStyles.textColor }}>{contributors}</Text>
-              <ChevronIcon color={isDarkTheme ? '#64748B' : '#94A3B8'} />
-            </TouchableOpacity>
-            {showContributorsDropdown && (
-              <View style={[styles.dropdownMenu, { backgroundColor: dynamicStyles.dropdownBg, borderColor: dynamicStyles.inputBorder }]}>
-                {contributorsList.map((c) => (
-                  <TouchableOpacity key={c} style={styles.dropdownItem} onPress={() => { setContributors(c); setShowContributorsDropdown(false); }}>
-                    <Text style={{ color: dynamicStyles.textColor }}>{c}</Text>
-                  </TouchableOpacity>
-                ))}
               </View>
-            )}
-          </View>
 
-          {/* Associated With */}
-          <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>Associated with</Text>
-            <TouchableOpacity
-              style={[styles.dropdownButton, { backgroundColor: dynamicStyles.inputBg, borderColor: dynamicStyles.inputBorder }]}
-              onPress={() => setShowAssociatedDropdown(!showAssociatedDropdown)}
-            >
-              <Text style={{ color: dynamicStyles.textColor }}>{associatedWith}</Text>
-              <ChevronIcon color={isDarkTheme ? '#64748B' : '#94A3B8'} />
-            </TouchableOpacity>
-            {showAssociatedDropdown && (
-              <View style={[styles.dropdownMenu, { backgroundColor: dynamicStyles.dropdownBg, borderColor: dynamicStyles.inputBorder }]}>
-                {associatedList.map((a) => (
-                  <TouchableOpacity key={a} style={styles.dropdownItem} onPress={() => { setAssociatedWith(a); setShowAssociatedDropdown(false); }}>
-                    <Text style={{ color: dynamicStyles.textColor }}>{a}</Text>
-                  </TouchableOpacity>
-                ))}
+              {/* Working on this project toggle */}
+              <View style={styles.toggleRow}>
+                <Text style={[styles.toggleLabel, { color: dynamicStyles.textColor }]}>Working on this project</Text>
+                <Switch
+                  value={workingOnProject}
+                  onValueChange={setWorkingOnProject}
+                  trackColor={{ false: '#767577', true: '#2563EB' }}
+                  thumbColor={workingOnProject ? '#FFFFFF' : '#f4f3f4'}
+                />
               </View>
-            )}
-          </View>
 
-          {/* Live Project URL (Optional) */}
-          <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>Live Project URL (Optional)</Text>
-            <TouchableOpacity
-              style={[styles.dropdownButton, { backgroundColor: dynamicStyles.inputBg, borderColor: dynamicStyles.inputBorder }]}
-              onPress={() => setShowUrlDropdown(!showUrlDropdown)}
-            >
-              <Text style={{ color: dynamicStyles.textColor }}>{liveUrl}</Text>
-              <ChevronIcon color={isDarkTheme ? '#64748B' : '#94A3B8'} />
-            </TouchableOpacity>
-            {showUrlDropdown && (
-              <View style={[styles.dropdownMenu, { backgroundColor: dynamicStyles.dropdownBg, borderColor: dynamicStyles.inputBorder }]}>
-                {urlList.map((u) => (
-                  <TouchableOpacity key={u} style={styles.dropdownItem} onPress={() => { setLiveUrl(u); setShowUrlDropdown(false); }}>
-                    <Text style={{ color: dynamicStyles.textColor }}>{u}</Text>
-                  </TouchableOpacity>
-                ))}
+              {/* Contributors */}
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>Contributors</Text>
+                <TouchableOpacity
+                  style={[styles.dropdownButton, { backgroundColor: dynamicStyles.inputBg, borderColor: dynamicStyles.inputBorder }]}
+                  onPress={() => setShowContributorsDropdown(!showContributorsDropdown)}
+                >
+                  <Text style={{ color: dynamicStyles.textColor }}>{contributors}</Text>
+                  <ChevronIcon color={isDarkTheme ? '#64748B' : '#94A3B8'} />
+                </TouchableOpacity>
+                {showContributorsDropdown && (
+                  <View style={[styles.dropdownMenu, { backgroundColor: dynamicStyles.dropdownBg, borderColor: dynamicStyles.inputBorder }]}>
+                    {contributorsList.map((c) => (
+                      <TouchableOpacity key={c} style={styles.dropdownItem} onPress={() => { setContributors(c); setShowContributorsDropdown(false); }}>
+                        <Text style={{ color: dynamicStyles.textColor }}>{c}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
               </View>
-            )}
-          </View>
 
-          {/* Description (Optional) */}
-          <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>Description (Optional)</Text>
-            <TextInput
-              style={[styles.input, styles.textArea, { backgroundColor: dynamicStyles.inputBg, color: dynamicStyles.textColor, borderColor: dynamicStyles.inputBorder }]}
-              value={description}
-              onChangeText={setDescription}
-              multiline
-              numberOfLines={4}
-              textAlignVertical="top"
-              placeholder="Enter Description"
-              placeholderTextColor={isDarkTheme ? '#64748B' : '#94A3B8'}
-            />
-          </View>
+              {/* Associated With */}
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>Associated with</Text>
+                <TouchableOpacity
+                  style={[styles.dropdownButton, { backgroundColor: dynamicStyles.inputBg, borderColor: dynamicStyles.inputBorder }]}
+                  onPress={() => setShowAssociatedDropdown(!showAssociatedDropdown)}
+                >
+                  <Text style={{ color: dynamicStyles.textColor }}>{associatedWith}</Text>
+                  <ChevronIcon color={isDarkTheme ? '#64748B' : '#94A3B8'} />
+                </TouchableOpacity>
+                {showAssociatedDropdown && (
+                  <View style={[styles.dropdownMenu, { backgroundColor: dynamicStyles.dropdownBg, borderColor: dynamicStyles.inputBorder }]}>
+                    {associatedList.map((a) => (
+                      <TouchableOpacity key={a} style={styles.dropdownItem} onPress={() => { setAssociatedWith(a); setShowAssociatedDropdown(false); }}>
+                        <Text style={{ color: dynamicStyles.textColor }}>{a}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+              </View>
 
-          {/* Save Button */}
-          <TouchableOpacity style={styles.saveButton} activeOpacity={0.8} onPress={onBackPress}>
-            <Text style={styles.saveButtonText}>Save</Text>
-          </TouchableOpacity>
+              {/* Live Project URL (Optional) */}
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>Live Project URL (Optional)</Text>
+                <TouchableOpacity
+                  style={[styles.dropdownButton, { backgroundColor: dynamicStyles.inputBg, borderColor: dynamicStyles.inputBorder }]}
+                  onPress={() => setShowUrlDropdown(!showUrlDropdown)}
+                >
+                  <Text style={{ color: dynamicStyles.textColor }}>{liveUrl}</Text>
+                  <ChevronIcon color={isDarkTheme ? '#64748B' : '#94A3B8'} />
+                </TouchableOpacity>
+                {showUrlDropdown && (
+                  <View style={[styles.dropdownMenu, { backgroundColor: dynamicStyles.dropdownBg, borderColor: dynamicStyles.inputBorder }]}>
+                    {urlList.map((u) => (
+                      <TouchableOpacity key={u} style={styles.dropdownItem} onPress={() => { setLiveUrl(u); setShowUrlDropdown(false); }}>
+                        <Text style={{ color: dynamicStyles.textColor }}>{u}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+              </View>
+
+              {/* Description (Optional) */}
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>Description (Optional)</Text>
+                <TextInput
+                  style={[styles.input, styles.textArea, { backgroundColor: dynamicStyles.inputBg, color: dynamicStyles.textColor, borderColor: dynamicStyles.inputBorder }]}
+                  value={description}
+                  onChangeText={setDescription}
+                  multiline
+                  numberOfLines={4}
+                  textAlignVertical="top"
+                  placeholder="Enter Description"
+                  placeholderTextColor={isDarkTheme ? '#64748B' : '#94A3B8'}
+                />
+              </View>
+
+              {/* Save Button */}
+              <TouchableOpacity 
+                style={[styles.saveButton, saving && { opacity: 0.7 }]} 
+                activeOpacity={0.8} 
+                onPress={handleSave}
+                disabled={saving}
+              >
+                {saving ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <Text style={styles.saveButtonText}>Save</Text>
+                )}
+              </TouchableOpacity>
+            </>
+          )}
 
           <View style={{ height: 40 }} />
         </ScrollView>

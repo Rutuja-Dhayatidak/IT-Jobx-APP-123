@@ -10,8 +10,11 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
+import { apiRequest } from '../services/api';
 
 interface PasswordManagerProps {
   onBackPress: () => void;
@@ -33,13 +36,50 @@ const EyeSlashIcon = ({ color }: { color: string }) => (
 );
 
 export default function PasswordManager({ onBackPress, isDarkTheme = true }: PasswordManagerProps) {
-  const [currentPassword, setCurrentPassword] = useState('password1234');
-  const [newPassword, setNewPassword] = useState('password5678');
-  const [confirmNewPassword, setConfirmNewPassword] = useState('password5678');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+
+  const handlePasswordChange = async () => {
+    if (!currentPassword || !newPassword || !confirmNewPassword) {
+      Alert.alert('Error', 'All fields are required.');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      Alert.alert('Error', 'New password must be at least 6 characters long.');
+      return;
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      Alert.alert('Error', 'New passwords do not match.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const res = await apiRequest('/candidates/change-password', {
+        method: 'PUT',
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+
+      if (res && res.success) {
+        Alert.alert('Success', 'Password changed successfully!');
+        onBackPress();
+      } else {
+        Alert.alert('Error', res.message || 'Failed to change password.');
+      }
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to change password.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const dynamicStyles = isDarkTheme ? darkStyles : lightStyles;
 
@@ -122,8 +162,17 @@ export default function PasswordManager({ onBackPress, isDarkTheme = true }: Pas
           </View>
 
           {/* Change Password Button */}
-          <TouchableOpacity style={styles.updateButton} activeOpacity={0.8} onPress={onBackPress}>
-            <Text style={styles.updateButtonText}>Change Password</Text>
+          <TouchableOpacity 
+            style={[styles.updateButton, loading && { opacity: 0.7 }]} 
+            activeOpacity={0.8} 
+            onPress={handlePasswordChange}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Text style={styles.updateButtonText}>Change Password</Text>
+            )}
           </TouchableOpacity>
 
           <View style={{ height: 40 }} />

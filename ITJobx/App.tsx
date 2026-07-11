@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { StatusBar, BackHandler } from 'react-native';
+import { StatusBar, BackHandler, View, ActivityIndicator } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import OnboardingScreen from './src/screen/OnboardingScreen';
 import Login from './src/screen/Login';
 import Register from './src/screen/Register';
@@ -36,10 +37,14 @@ import Filter from './src/screen/Filter';
 import JobDetail from './src/screen/JobDetail';
 import ApplyJob from './src/screen/ApplyJob';
 import Bookmark from './src/screen/Bookmark';
+import PrivacyPolicy from './src/profile/PrivacyPolicy';
 import BottomNavigation from './src/components/BottomNavigation';
+import JobStatus from './src/screen/JobStatus';
+import { setToken } from './src/services/api';
 
 type ScreenName =
   | 'onboarding'
+  | 'job_status'
   | 'login'
   | 'register'
   | 'forgot_password'
@@ -72,7 +77,8 @@ type ScreenName =
   | 'job_detail'
   | 'bookmark'
   | 'languages'
-  | 'apply_job';
+  | 'apply_job'
+  | 'privacy_policy';
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState<ScreenName>('onboarding');
@@ -85,6 +91,61 @@ function App() {
   const [user, setUser] = useState<any>(null);
   const [otpType, setOtpType] = useState<'register' | 'forgot_password'>('register');
   const [userLocation, setUserLocation] = useState('New York, USA');
+  const [savedJobs, setSavedJobs] = useState<any[]>([]);
+  const [selectedApplication, setSelectedApplication] = useState<any>(null);
+  const [isLoadingSession, setIsLoadingSession] = useState(true);
+
+  // Load persistent login session on startup
+  useEffect(() => {
+    const loadSession = async () => {
+      try {
+        const savedToken = await AsyncStorage.getItem('authToken');
+        const savedUser = await AsyncStorage.getItem('user');
+        const savedLocation = await AsyncStorage.getItem('userLocation');
+        const savedBookmarks = await AsyncStorage.getItem('savedJobs');
+        
+        if (savedToken) {
+          setAuthToken(savedToken);
+          setToken(savedToken);
+          if (savedUser) {
+            setUser(JSON.parse(savedUser));
+          }
+          if (savedLocation) {
+            setUserLocation(savedLocation);
+          }
+          setCurrentScreen('home');
+          setScreenHistory(['home']);
+        }
+
+        if (savedBookmarks) {
+          setSavedJobs(JSON.parse(savedBookmarks));
+        }
+      } catch (err) {
+        console.error('Error loading session:', err);
+      } finally {
+        setIsLoadingSession(false);
+      }
+    };
+    loadSession();
+  }, []);
+
+  // Persist savedJobs whenever it changes
+  useEffect(() => {
+    const saveJobsToStorage = async () => {
+      if (!isLoadingSession) {
+        try {
+          await AsyncStorage.setItem('savedJobs', JSON.stringify(savedJobs));
+        } catch (err) {
+          console.error('Error saving bookmarked jobs:', err);
+        }
+      }
+    };
+    saveJobsToStorage();
+  }, [savedJobs, isLoadingSession]);
+
+  useEffect(() => {
+    setToken(authToken);
+  }, [authToken]);
 
   // Navigate to a new screen and add to history stack
   const navigateTo = (screen: ScreenName) => {
@@ -119,6 +180,17 @@ function App() {
     return () => backHandler.remove();
   }, [screenHistory]);
 
+  if (isLoadingSession) {
+    return (
+      <SafeAreaProvider>
+        <StatusBar barStyle={isDarkTheme ? 'light-content' : 'dark-content'} />
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: isDarkTheme ? '#0B0F19' : '#F8FAFC' }}>
+          <ActivityIndicator size="large" color="#2563EB" />
+        </View>
+      </SafeAreaProvider>
+    );
+  }
+
   return (
     <SafeAreaProvider>
       <StatusBar barStyle={isDarkTheme ? 'light-content' : 'dark-content'} />
@@ -133,7 +205,13 @@ function App() {
         <Login
           onRegisterPress={() => navigateTo('register')}
           onBackPress={() => goBack()}
-          onLoginSuccess={(token, loggedUser) => {
+          onLoginSuccess={async (token, loggedUser) => {
+            try {
+              await AsyncStorage.setItem('authToken', token);
+              await AsyncStorage.setItem('user', JSON.stringify(loggedUser));
+            } catch (err) {
+              console.error('Error saving login session:', err);
+            }
             setAuthToken(token);
             setUser(loggedUser);
             navigateTo('location');
@@ -166,8 +244,13 @@ function App() {
         <OTPVerification
           email={resetEmail}
           onBackPress={() => goBack()}
-          onVerifyPress={(token) => {
+          onVerifyPress={async (token) => {
             if (otpType === 'register') {
+              try {
+                await AsyncStorage.setItem('authToken', token);
+              } catch (err) {
+                console.error('Error saving session:', err);
+              }
               setAuthToken(token);
               navigateTo('profile');
             } else {
@@ -196,8 +279,13 @@ function App() {
       )}
       {currentScreen === 'location' && (
         <Location
-          onFinish={(location) => {
+          onFinish={async (location) => {
             console.log('Selected location:', location);
+            try {
+              await AsyncStorage.setItem('userLocation', location);
+            } catch (err) {
+              console.error('Error saving userLocation:', err);
+            }
             setUserLocation(location);
             navigateTo('home');
           }}
@@ -250,6 +338,19 @@ function App() {
           }}
           onSettingsPress={() => navigateTo('settings')}
           onNavigateTo={navigateTo}
+          onLogout={async () => {
+            try {
+              await AsyncStorage.removeItem('authToken');
+              await AsyncStorage.removeItem('user');
+              await AsyncStorage.removeItem('userLocation');
+            } catch (err) {
+              console.error('Error clearing session:', err);
+            }
+            setAuthToken(null);
+            setUser(null);
+            setScreenHistory(['onboarding']);
+            setCurrentScreen('onboarding');
+          }}
         />
       )}
       {currentScreen === 'settings' && (
@@ -355,6 +456,10 @@ function App() {
         <MyApplication
           onBackPress={() => goBack()}
           isDarkTheme={isDarkTheme}
+          onApplicationPress={(app) => {
+            setSelectedApplication(app);
+            navigateTo('job_status');
+          }}
         />
       )}
       {currentScreen === 'notification' && (
@@ -369,21 +474,40 @@ function App() {
           isDarkTheme={isDarkTheme}
           initialTab={findJobInitialTab}
           onFilterPress={() => navigateTo('filter')}
+          savedJobs={savedJobs}
+          onToggleSave={(job) => {
+            const companyName = job.company || job.companyId?.name || 'Company';
+            const mappedJob = {
+              _id: job._id || job.id || '',
+              title: job.role || job.title || 'Position',
+              company: companyName,
+              logo: companyName.substring(0, 1) + '.',
+              logoBg: companyName === 'Google' ? '#EA4335' : companyName === 'Amazon' ? '#FF9900' : '#F24E1E',
+              location: job.location,
+              salary: job.salary || job.salaryBudget,
+              tags: job.tags || [job.jobType, job.locationType, job.experienceLevel].filter(Boolean),
+              applicants: job.applicants || job.applyCount || 0,
+            };
+            const isAlreadySaved = savedJobs.some((j) => (j._id || j.id) === mappedJob._id);
+            if (isAlreadySaved) {
+              setSavedJobs((prev) => prev.filter((j) => (j._id || j.id) !== mappedJob._id));
+            } else {
+              setSavedJobs((prev) => [...prev, mappedJob]);
+            }
+          }}
           onJobPress={(job) => {
             const mappedJob = {
-              title: job.role,
+              ...job,
+              _id: job._id || job.id || '',
+              title: job.role || job.title,
               company: job.company,
-              logo: job.company.substring(0, 1) + '.',
+              logo: job.company ? (job.company.substring(0, 1) + '.') : 'C.',
               logoBg: job.company === 'Google' ? '#EA4335' : job.company === 'Amazon' ? '#FF9900' : '#F24E1E',
               location: job.location,
-              salary: job.salary.includes('k')
-                ? job.salary
-                : job.salary.includes('/m')
-                ? job.salary.replace('/m', '') + ' - $' + (parseInt(job.salary.replace(/[^0-9]/g, ''), 10) * 1.2).toFixed(0) + '/m'
-                : job.salary,
-              type: job.tags[0],
-              workplace: job.tags[1],
-              experience: job.tags[2],
+              salary: job.salary,
+              type: job.tags ? job.tags[0] : job.jobType,
+              workplace: job.tags ? job.tags[1] : job.locationType,
+              experience: job.tags ? job.tags[2] : job.experienceLevel,
             };
             setSelectedJob(mappedJob);
             navigateTo('job_detail');
@@ -392,7 +516,11 @@ function App() {
             if (tab === 'home') {
               navigateTo('home');
             } else if (tab === 'profile') {
-              navigateTo('myprofile');
+              if (!authToken) {
+                navigateTo('login');
+              } else {
+                navigateTo('myprofile');
+              }
             } else if (tab === 'chat') {
               navigateTo('notification');
             } else if (tab === 'saved') {
@@ -415,11 +543,19 @@ function App() {
         <Bookmark
           onBackPress={() => goBack()}
           isDarkTheme={isDarkTheme}
+          savedJobs={savedJobs}
+          onToggleSave={(job) => {
+            setSavedJobs((prev) => prev.filter((j) => (j._id || j.id) !== (job._id || job.id)));
+          }}
           onNavigateToTab={(tab) => {
             if (tab === 'home') {
               navigateTo('home');
             } else if (tab === 'profile') {
-              navigateTo('myprofile');
+              if (!authToken) {
+                navigateTo('login');
+              } else {
+                navigateTo('myprofile');
+              }
             } else if (tab === 'portfolio') {
               setFindJobInitialTab('available');
               navigateTo('find_job');
@@ -431,15 +567,17 @@ function App() {
           }}
           onJobPress={(job) => {
             const mappedJob = {
+              ...job,
+              _id: job._id || job.id || '',
               title: job.title,
               company: job.company,
               logo: job.logo,
               logoBg: job.logoBg,
               location: job.location,
-              salary: job.salary + job.salaryUnit,
-              type: job.tags[0],
-              workplace: job.tags[1],
-              experience: job.tags[2],
+              salary: job.salary,
+              type: job.tags && job.tags.length > 0 ? job.tags[0] : 'Full-time',
+              workplace: job.tags && job.tags.length > 1 ? job.tags[1] : 'Remote',
+              experience: job.tags && job.tags.length > 2 ? job.tags[2] : 'Mid Level',
             };
             setSelectedJob(mappedJob);
             navigateTo('job_detail');
@@ -467,7 +605,11 @@ function App() {
             } else if (tab === 'chat') {
               navigateTo('notification');
             } else if (tab === 'profile') {
-              navigateTo('myprofile');
+              if (!authToken) {
+                navigateTo('login');
+              } else {
+                navigateTo('myprofile');
+              }
             }
           }}
         />
@@ -478,10 +620,26 @@ function App() {
           isDarkTheme={isDarkTheme}
           onBackPress={() => goBack()}
           onApplyPress={() => navigateTo('apply_job')}
+          isSaved={savedJobs.some((j) => (j._id || j.id) === (selectedJob?._id || selectedJob?.id))}
+          onToggleSave={() => {
+            if (!selectedJob) return;
+            const isAlreadySaved = savedJobs.some((j) => (j._id || j.id) === (selectedJob._id || selectedJob.id));
+            if (isAlreadySaved) {
+              setSavedJobs((prev) => prev.filter((j) => (j._id || j.id) !== (selectedJob._id || selectedJob.id)));
+            } else {
+              setSavedJobs((prev) => [...prev, selectedJob]);
+            }
+          }}
         />
       )}
       {currentScreen === 'languages' && (
         <Languages
+          onBackPress={() => goBack()}
+          isDarkTheme={isDarkTheme}
+        />
+      )}
+      {currentScreen === 'privacy_policy' && (
+        <PrivacyPolicy
           onBackPress={() => goBack()}
           isDarkTheme={isDarkTheme}
         />
@@ -491,7 +649,15 @@ function App() {
           onBackPress={() => goBack()}
           isDarkTheme={isDarkTheme}
           jobTitle={selectedJob?.title || "Position"}
+          jobId={selectedJob?._id}
           onGoToApplication={() => navigateTo('my_application')}
+        />
+      )}
+      {currentScreen === 'job_status' && (
+        <JobStatus
+          application={selectedApplication}
+          isDarkTheme={isDarkTheme}
+          onBackPress={() => goBack()}
         />
       )}
     </SafeAreaProvider>

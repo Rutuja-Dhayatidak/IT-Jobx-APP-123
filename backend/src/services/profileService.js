@@ -56,6 +56,34 @@ const updateProfile = async (userId, updateData) => {
   delete cleanData.updatedAt;
   delete cleanData.__v;
 
+  // Sync candidate level fields
+  const candidateUpdates = {};
+  const candidate = await Candidate.findById(userId);
+  if (candidate) {
+    if (updateData.firstName !== undefined && updateData.firstName !== candidate.firstName) {
+      candidateUpdates.firstName = updateData.firstName;
+    }
+    if (updateData.lastName !== undefined && updateData.lastName !== candidate.lastName) {
+      candidateUpdates.lastName = updateData.lastName;
+    }
+    if (updateData.phone !== undefined && updateData.phone !== candidate.phone) {
+      candidateUpdates.phone = updateData.phone;
+    }
+    if (updateData.email !== undefined && updateData.email.toLowerCase() !== candidate.email.toLowerCase()) {
+      const existingEmail = await Candidate.findOne({ 
+        email: updateData.email.toLowerCase(), 
+        _id: { $ne: userId } 
+      });
+      if (existingEmail) {
+        throw new Error("Email is already in use by another account");
+      }
+      candidateUpdates.email = updateData.email;
+    }
+    if (Object.keys(candidateUpdates).length > 0) {
+      await Candidate.findByIdAndUpdate(userId, candidateUpdates);
+    }
+  }
+
   let profile = await Profile.findOne({ userId });
 
   if (profile) {

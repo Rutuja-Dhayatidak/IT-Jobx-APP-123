@@ -9,6 +9,7 @@ import {
   ScrollView,
   Dimensions,
   Platform,
+  Share,
 } from 'react-native';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import FadeInView from '../components/FadeInView';
@@ -20,6 +21,8 @@ interface JobDetailProps {
   onBackPress?: () => void;
   isDarkTheme?: boolean;
   onApplyPress?: () => void;
+  isSaved?: boolean;
+  onToggleSave?: () => void;
 }
 
 // Verified badge checkmark
@@ -96,9 +99,8 @@ const TargetIllustration = () => (
   </Svg>
 );
 
-export default function JobDetail({ job, onBackPress, isDarkTheme = false, onApplyPress }: JobDetailProps) {
+export default function JobDetail({ job, onBackPress, isDarkTheme = false, onApplyPress, isSaved = false, onToggleSave }: JobDetailProps) {
   const [activeTab, setActiveTab] = useState<'details' | 'company' | 'reviews' | 'similar'>('details');
-  const [isSaved, setIsSaved] = useState(false);
 
   const dynamicStyles = isDarkTheme ? darkStyles : lightStyles;
 
@@ -113,6 +115,30 @@ export default function JobDetail({ job, onBackPress, isDarkTheme = false, onApp
     type: 'Full Time',
     workplace: 'Office',
     experience: '2-4 Yrs Exp',
+  };
+
+  const handleShare = async () => {
+    try {
+      const jobId = jobInfo._id || '';
+      const jobUrl = `https://itjobx.com/jobs/${jobId}`;
+      
+      const message = `Check out this job on ITJobx:
+Role: ${jobInfo.title}
+Company: ${jobInfo.company || jobInfo.companyId?.name || 'Company'}
+Location: ${jobInfo.location || 'Remote'}
+Salary: ${jobInfo.salary || jobInfo.salaryBudget || 'Negotiable'}
+
+Apply Link: ${jobUrl}
+
+Apply now using the ITJobx App!`;
+
+      await Share.share({
+        message,
+        url: jobUrl,
+      });
+    } catch (error: any) {
+      console.error('Error sharing job:', error.message);
+    }
   };
 
   return (
@@ -133,6 +159,7 @@ export default function JobDetail({ job, onBackPress, isDarkTheme = false, onApp
         <View style={styles.headerRight}>
           <TouchableOpacity
             style={[styles.headerBtn, { backgroundColor: dynamicStyles.cardBg, borderColor: dynamicStyles.cardBorder }]}
+            onPress={handleShare}
             activeOpacity={0.7}
           >
             {/* Share Icon */}
@@ -142,7 +169,7 @@ export default function JobDetail({ job, onBackPress, isDarkTheme = false, onApp
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.headerBtn, { backgroundColor: dynamicStyles.cardBg, borderColor: dynamicStyles.cardBorder, marginLeft: 12 }]}
-            onPress={() => setIsSaved(!isSaved)}
+            onPress={onToggleSave}
             activeOpacity={0.7}
           >
             {/* Heart Icon */}
@@ -252,13 +279,14 @@ export default function JobDetail({ job, onBackPress, isDarkTheme = false, onApp
         </View>
 
         {/* Tab Content */}
+        {/* Tab Content */}
         {activeTab === 'details' && (
           <View>
             {/* Card 1: About the Role */}
             <View style={[styles.contentCard, { backgroundColor: dynamicStyles.cardBg, borderColor: dynamicStyles.cardBorder }]}>
               <Text style={[styles.cardTitle, { color: dynamicStyles.textColor }]}>About the Role</Text>
               <Text style={[styles.cardDescriptionText, { color: dynamicStyles.labelColor }]}>
-                We are looking for a skilled Frontend Developer to join our team and build amazing user experiences. You will work on building responsive web applications and collaborate with cross-functional teams.
+                {jobInfo.description || "We are looking for a skilled Frontend Developer to join our team and build amazing user experiences. You will work on building responsive web applications and collaborate with cross-functional teams."}
               </Text>
             </View>
 
@@ -267,13 +295,16 @@ export default function JobDetail({ job, onBackPress, isDarkTheme = false, onApp
               <View style={styles.illustrationRow}>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.cardTitle, { color: dynamicStyles.textColor, marginBottom: 12 }]}>Key Responsibilities</Text>
-                  {[
-                    'Build responsive and interactive user interfaces using React.js',
-                    'Develop reusable components and front-end libraries',
-                    'Optimize components for maximum performance',
-                    'Collaborate with designers and backend developers',
-                    'Ensure technical feasibility of UI/UX designs',
-                  ].map((item, idx) => (
+                  {(jobInfo.responsibilities && jobInfo.responsibilities.length > 0
+                    ? jobInfo.responsibilities
+                    : [
+                        'Build responsive and interactive user interfaces using modern framework libraries',
+                        'Develop reusable components and front-end libraries',
+                        'Optimize components for maximum performance',
+                        'Collaborate with designers and backend developers',
+                        'Ensure technical feasibility of UI/UX designs',
+                      ]
+                  ).map((item: string, idx: number) => (
                     <View key={idx} style={styles.bulletRow}>
                       <View style={styles.bulletDot} />
                       <Text style={[styles.bulletText, { color: dynamicStyles.labelColor }]}>{item}</Text>
@@ -290,14 +321,17 @@ export default function JobDetail({ job, onBackPress, isDarkTheme = false, onApp
             <View style={[styles.contentCard, { backgroundColor: dynamicStyles.cardBg, borderColor: dynamicStyles.cardBorder }]}>
               <View style={styles.illustrationRow}>
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.cardTitle, { color: dynamicStyles.textColor, marginBottom: 12 }]}>Requirements</Text>
-                  {[
-                    '2-4 years of experience in frontend development',
-                    'Strong knowledge of HTML, CSS, JavaScript, React.js',
-                    'Experience with state management (Redux/Context API)',
-                    'Familiarity with REST APIs and version control (Git)',
-                    'Good problem-solving and communication skills',
-                  ].map((item, idx) => (
+                  <Text style={[styles.cardTitle, { color: dynamicStyles.textColor, marginBottom: 12 }]}>Key Skills & Requirements</Text>
+                  {(jobInfo.skills && jobInfo.skills.length > 0
+                    ? jobInfo.skills
+                    : [
+                        '2-4 years of experience in frontend development',
+                        'Strong knowledge of HTML, CSS, JavaScript, React.js',
+                        'Experience with state management (Redux/Context API)',
+                        'Familiarity with REST APIs and version control (Git)',
+                        'Good problem-solving and communication skills',
+                      ]
+                  ).map((item: string, idx: number) => (
                     <View key={idx} style={styles.bulletRow}>
                       <View style={styles.bulletDot} />
                       <Text style={[styles.bulletText, { color: dynamicStyles.labelColor }]}>{item}</Text>
@@ -322,7 +356,9 @@ export default function JobDetail({ job, onBackPress, isDarkTheme = false, onApp
                   </View>
                   <View style={styles.gridDetails}>
                     <Text style={[styles.gridLabel, { color: dynamicStyles.subLabelColor }]}>Job Type</Text>
-                    <Text style={[styles.gridValue, { color: dynamicStyles.textColor }]}>Full Time</Text>
+                    <Text style={[styles.gridValue, { color: dynamicStyles.textColor }]}>
+                      {jobInfo.type || jobInfo.jobType || "Full Time"}
+                    </Text>
                   </View>
                 </View>
 
@@ -336,7 +372,9 @@ export default function JobDetail({ job, onBackPress, isDarkTheme = false, onApp
                   </View>
                   <View style={styles.gridDetails}>
                     <Text style={[styles.gridLabel, { color: dynamicStyles.subLabelColor }]}>Experience</Text>
-                    <Text style={[styles.gridValue, { color: dynamicStyles.textColor }]}>2-4 Years</Text>
+                    <Text style={[styles.gridValue, { color: dynamicStyles.textColor }]}>
+                      {jobInfo.experience || jobInfo.experienceLevel || "2-4 Years"}
+                    </Text>
                   </View>
                 </View>
 
@@ -350,7 +388,9 @@ export default function JobDetail({ job, onBackPress, isDarkTheme = false, onApp
                   </View>
                   <View style={styles.gridDetails}>
                     <Text style={[styles.gridLabel, { color: dynamicStyles.subLabelColor }]}>Department</Text>
-                    <Text style={[styles.gridValue, { color: dynamicStyles.textColor }]}>Engineering</Text>
+                    <Text style={[styles.gridValue, { color: dynamicStyles.textColor }]}>
+                      {jobInfo.department || "Engineering"}
+                    </Text>
                   </View>
                 </View>
 
@@ -363,8 +403,10 @@ export default function JobDetail({ job, onBackPress, isDarkTheme = false, onApp
                     </Svg>
                   </View>
                   <View style={styles.gridDetails}>
-                    <Text style={[styles.gridLabel, { color: dynamicStyles.subLabelColor }]}>Education</Text>
-                    <Text style={[styles.gridValue, { color: dynamicStyles.textColor }]}>Bachelor's</Text>
+                    <Text style={[styles.gridLabel, { color: dynamicStyles.subLabelColor }]}>Openings</Text>
+                    <Text style={[styles.gridValue, { color: dynamicStyles.textColor }]}>
+                      {jobInfo.openings !== undefined ? `${jobInfo.openings} Position(s)` : "1 Position"}
+                    </Text>
                   </View>
                 </View>
               </View>
@@ -376,7 +418,7 @@ export default function JobDetail({ job, onBackPress, isDarkTheme = false, onApp
           <View style={[styles.contentCard, { backgroundColor: dynamicStyles.cardBg, borderColor: dynamicStyles.cardBorder }]}>
             <Text style={[styles.cardTitle, { color: dynamicStyles.textColor }]}>About {jobInfo.company}</Text>
             <Text style={[styles.cardDescriptionText, { color: dynamicStyles.labelColor }]}>
-              {jobInfo.company} is a leading digital services provider specializing in state of the art web and mobile application engineering. We offer remote-first working opportunities and a highly collaborative team workspace.
+              {jobInfo.companyId?.about || jobInfo.companyId?.description || `${jobInfo.company} is a leading digital services provider specializing in state of the art web and mobile application engineering. We offer remote-first working opportunities and a highly collaborative team workspace.`}
             </Text>
           </View>
         )}
@@ -405,7 +447,7 @@ export default function JobDetail({ job, onBackPress, isDarkTheme = false, onApp
       <View style={[styles.bottomBar, { borderTopColor: dynamicStyles.dividerColor, backgroundColor: dynamicStyles.cardBg }]}>
         <TouchableOpacity
           style={[styles.saveBtn, { borderColor: dynamicStyles.cardBorder, backgroundColor: dynamicStyles.backgroundColor }]}
-          onPress={() => setIsSaved(!isSaved)}
+          onPress={onToggleSave}
           activeOpacity={0.8}
         >
           <Svg width={18} height={18} viewBox="0 0 24 24" fill={isSaved ? '#EF4444' : 'none'}>
@@ -434,7 +476,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 24,
-    marginTop: Platform.OS === 'ios' ? 10 : 20,
+    marginTop: Platform.OS === 'ios' ? 24 : 36,
   },
   headerBtn: {
     width: 44,

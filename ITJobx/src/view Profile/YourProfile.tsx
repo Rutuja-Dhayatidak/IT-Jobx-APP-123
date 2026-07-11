@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -9,6 +9,8 @@ import {
   ScrollView,
 } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
+import { viewProfileService } from '../services/viewProfile';
+
 interface YourProfileProps {
   onBackPress: () => void;
   isDarkTheme?: boolean;
@@ -90,20 +92,50 @@ const ResumeIcon = () => (
 );
 
 export default function YourProfile({ onBackPress, isDarkTheme = true, onNavigateTo }: YourProfileProps) {
-  const dynamicStyles = isDarkTheme ? darkStyles : lightStyles;
+  const [profile, setProfile] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const data = await viewProfileService.getProfile();
+        if (data && data.success && data.profile) {
+          setProfile(data.profile);
+        }
+      } catch (err: any) {
+        console.error('Error fetching profile in YourProfile:', err);
+      }
+    };
+    fetchProfile();
+  }, []);
+
+  const contactInfoCompleted = !!(profile?.userId?.email || profile?.userId?.phone || profile?.location);
+  const aboutMeCompleted = !!(profile?.about);
+  const experienceCompleted = !!(profile?.experience && profile.experience.length > 0);
+  const educationCompleted = !!(profile?.education && profile.education.length > 0);
+  const projectsCompleted = !!(profile?.projects && profile.projects.length > 0);
+  const certificatesCompleted = !!(profile?.certifications && profile.certifications.length > 0);
+  const volunteerCompleted = !!(profile?.volunteer && profile.volunteer.length > 0);
+  const awardsCompleted = !!(profile?.awards && profile.awards.length > 0);
+  const skillsCompleted = !!(profile?.skills && profile.skills.length > 0);
+  const resumeCompleted = !!(profile?.resumeUrl);
 
   const profileSections = [
-    { title: 'Contact Info', icon: <ContactIcon />, completed: false, sectionKey: 'contact_info' },
-    { title: 'About Me', icon: <AboutIcon />, completed: true, sectionKey: 'about_me' },
-    { title: 'Experience', icon: <ExperienceIcon />, completed: true, sectionKey: 'experience' },
-    { title: 'Education', icon: <EducationIcon />, completed: true, sectionKey: 'education' },
-    { title: 'Projects', icon: <ProjectsIcon />, completed: false, sectionKey: 'projects' },
-    { title: 'Certificates & License', icon: <CertificateIcon />, completed: false, sectionKey: 'certificates' },
-    { title: 'Volunteers Experience', icon: <VolunteerIcon />, completed: false, sectionKey: 'volunteer' },
-    { title: 'Awards & Achievements', icon: <AwardIcon />, completed: false, sectionKey: 'awards' },
-    { title: 'Skills', icon: <SkillIcon />, completed: false, sectionKey: 'skills' },
-    { title: 'Resume/CV', icon: <ResumeIcon />, completed: false, sectionKey: 'resume' },
+    { title: 'Contact Info', icon: <ContactIcon />, completed: contactInfoCompleted, sectionKey: 'contact_info' },
+    { title: 'About Me', icon: <AboutIcon />, completed: aboutMeCompleted, sectionKey: 'about_me' },
+    { title: 'Experience', icon: <ExperienceIcon />, completed: experienceCompleted, sectionKey: 'experience' },
+    { title: 'Education', icon: <EducationIcon />, completed: educationCompleted, sectionKey: 'education' },
+    { title: 'Projects', icon: <ProjectsIcon />, completed: projectsCompleted, sectionKey: 'projects' },
+    { title: 'Certificates & License', icon: <CertificateIcon />, completed: certificatesCompleted, sectionKey: 'certificates' },
+    { title: 'Volunteers Experience', icon: <VolunteerIcon />, completed: volunteerCompleted, sectionKey: 'volunteer' },
+    { title: 'Awards & Achievements', icon: <AwardIcon />, completed: awardsCompleted, sectionKey: 'awards' },
+    { title: 'Skills', icon: <SkillIcon />, completed: skillsCompleted, sectionKey: 'skills' },
+    { title: 'Resume/CV', icon: <ResumeIcon />, completed: resumeCompleted, sectionKey: 'resume' },
   ];
+
+  const completedCount = profileSections.filter(s => s.completed).length;
+  const progressPercent = completedCount * 10;
+
+  const dynamicStyles = isDarkTheme ? darkStyles : lightStyles;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: dynamicStyles.backgroundColor }]}>
@@ -125,9 +157,9 @@ export default function YourProfile({ onBackPress, isDarkTheme = true, onNavigat
       {/* Progress Bar Container */}
       <View style={styles.progressContainer}>
         <View style={[styles.progressBarBg, { backgroundColor: isDarkTheme ? '#1E293B' : '#E2E8F0' }]}>
-          <View style={styles.progressBarFill} />
+          <View style={[styles.progressBarFill, { width: `${progressPercent}%` }]} />
         </View>
-        <Text style={styles.progressText}>3/10</Text>
+        <Text style={styles.progressText}>{completedCount}/10</Text>
       </View>
 
       {/* Checklist Scroll */}

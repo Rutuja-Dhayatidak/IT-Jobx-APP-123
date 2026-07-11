@@ -13,32 +13,32 @@ interface BottomNavigationProps {
 
 // App-specific Icons
 const HomeIcon = ({ color }: { color: string }) => (
-  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+  <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
     <Path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" fill={color} />
   </Svg>
 );
 
 const PortfolioIcon = ({ color }: { color: string }) => (
-  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+  <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
     <Rect x="3" y="6" width="18" height="14" rx="2" stroke={color} strokeWidth="2" />
     <Path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2" stroke={color} strokeWidth="2" />
   </Svg>
 );
 
 const BookmarkIcon = ({ color }: { color: string }) => (
-  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+  <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
     <Path d="M17 3H7c-1.1 0-1.99.9-1.99 2L5 21l7-3 7 3V5c0-1.1-.9-2-2-2z" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
   </Svg>
 );
 
 const ChatIcon = ({ color }: { color: string }) => (
-  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+  <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
     <Path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm0-3h12v2H6V6zm0 6h8v2H6v-2z" fill={color} />
   </Svg>
 );
 
 const ProfileIcon = ({ color }: { color: string }) => (
-  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+  <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
     <Circle cx="12" cy="8" r="4" stroke={color} strokeWidth="2" />
     <Path d="M5 20a7 7 0 0114 0" stroke={color} strokeWidth="2" strokeLinecap="round" />
   </Svg>

@@ -59,7 +59,14 @@ const registerCandidate = async (userData) => {
         </div>
       `;
 
-      await sendEmail(email, "Candidate Registration - OTP Verification", `Your OTP is ${otp}`, htmlContent);
+      try {
+        await sendEmail(email, "Candidate Registration - OTP Verification", `Your OTP is ${otp}`, htmlContent);
+      } catch (emailErr) {
+        console.log("\n---------------------------------------------------------");
+        console.log("⚠️ EMAIL SENDING FAILED (SMTP config issue):", emailErr.message);
+        console.log(`🔑 DEV MODE OTP FOR ${email}: ${otp}`);
+        console.log("---------------------------------------------------------\n");
+      }
       return existing;
     }
   }
@@ -98,7 +105,14 @@ const registerCandidate = async (userData) => {
     </div>
   `;
 
-  await sendEmail(email, "Candidate Registration - OTP Verification", `Your OTP is ${otp}`, htmlContent);
+  try {
+    await sendEmail(email, "Candidate Registration - OTP Verification", `Your OTP is ${otp}`, htmlContent);
+  } catch (emailErr) {
+    console.log("\n---------------------------------------------------------");
+    console.log("⚠️ EMAIL SENDING FAILED (SMTP config issue):", emailErr.message);
+    console.log(`🔑 DEV MODE OTP FOR ${email}: ${otp}`);
+    console.log("---------------------------------------------------------\n");
+  }
 
   return user;
 };
@@ -158,9 +172,26 @@ const getProfile = async (userId) => {
   return user;
 };
 
+const changePassword = async (userId, currentPassword, newPassword) => {
+  const user = await Candidate.findById(userId);
+  if (!user) {
+    throw new Error("User not found");
+  }
+
+  const isMatch = await bcrypt.compare(currentPassword, user.password);
+  if (!isMatch) {
+    throw new Error("Incorrect current password");
+  }
+
+  user.password = newPassword;
+  await user.save();
+  return { success: true };
+};
+
 module.exports = {
   registerCandidate,
   verifyOtp,
   loginCandidate,
-  getProfile
+  getProfile,
+  changePassword
 };

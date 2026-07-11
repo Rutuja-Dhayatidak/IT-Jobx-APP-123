@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -11,8 +11,11 @@ import {
   Switch,
   KeyboardAvoidingView,
   Platform,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
+import { viewProfileService } from '../services/viewProfile';
 
 interface VolunteerProps {
   onBackPress: () => void;
@@ -43,10 +46,99 @@ export default function Volunteer({ onBackPress, isDarkTheme = true }: Volunteer
   const [description, setDescription] = useState('');
   const [website, setWebsite] = useState('');
 
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
   const [showFromDropdown, setShowFromDropdown] = useState(false);
   const [showToDropdown, setShowToDropdown] = useState(false);
 
   const months = ['Dec 2020', 'Jan 2021', 'Feb 2021', 'Mar 2021', 'Select'];
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const data = await viewProfileService.getProfile();
+        if (data && data.success && data.profile && data.profile.volunteer && data.profile.volunteer.length > 0) {
+          const vol = data.profile.volunteer[0];
+          setTitle(vol.title || '');
+          setOrganization(vol.organization || '');
+          setRole(vol.role || '');
+          if (vol.duration) {
+            const parts = vol.duration.split(' - ');
+            if (parts.length > 0) setFromMonth(parts[0]);
+            if (parts.length > 1) {
+              setToMonth(parts[1]);
+              setCurrent(parts[1] === 'Present');
+            }
+          }
+          setDescription(vol.description || '');
+          setWebsite(vol.website || '');
+        }
+      } catch (err: any) {
+        console.error('Error fetching volunteer data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProfile();
+  }, []);
+
+  const handleSave = async () => {
+    if (!title || !organization) {
+      Alert.alert('Error', 'Title and Organization are required.');
+      return;
+    }
+    try {
+      setSaving(true);
+      const updatedVol = {
+        title,
+        organization,
+        role,
+        duration: current ? `${fromMonth} - Present` : `${fromMonth} - ${toMonth}`,
+        description,
+        website,
+      };
+      const data = await viewProfileService.updateProfile({ volunteer: [updatedVol] });
+      if (data && data.success) {
+        Alert.alert('Success', 'Volunteer experience updated successfully!');
+        onBackPress();
+      } else {
+        Alert.alert('Error', 'Failed to update volunteer experience.');
+      }
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to update volunteer experience.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    Alert.alert(
+      'Confirm Delete',
+      'Are you sure you want to delete this volunteer experience?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setSaving(true);
+              const data = await viewProfileService.updateProfile({ volunteer: [] });
+              if (data && data.success) {
+                Alert.alert('Deleted', 'Volunteer experience removed.');
+                onBackPress();
+              }
+            } catch (err: any) {
+              Alert.alert('Error', err.message || 'Failed to delete volunteer experience.');
+            } finally {
+              setSaving(false);
+            }
+          }
+        }
+      ]
+    );
+  };
 
   const dynamicStyles = isDarkTheme ? darkStyles : lightStyles;
 
@@ -64,134 +156,153 @@ export default function Volunteer({ onBackPress, isDarkTheme = true }: Volunteer
             <Text style={[styles.backArrow, { color: dynamicStyles.textColor }]}>←</Text>
           </TouchableOpacity>
           <Text style={[styles.headerTitle, { color: dynamicStyles.textColor }]}>Volunteers Experience</Text>
-          <TouchableOpacity style={[styles.deleteButton, { borderColor: dynamicStyles.buttonBorder }]} activeOpacity={0.7}>
+          <TouchableOpacity 
+            style={[styles.deleteButton, { borderColor: dynamicStyles.buttonBorder }]} 
+            activeOpacity={0.7}
+            onPress={handleDelete}
+          >
             <TrashIcon />
           </TouchableOpacity>
         </View>
 
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          {/* Title */}
-          <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>Title</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: dynamicStyles.inputBg, color: dynamicStyles.textColor, borderColor: dynamicStyles.inputBorder }]}
-              value={title}
-              onChangeText={setTitle}
-              placeholder="Enter Title"
-              placeholderTextColor={isDarkTheme ? '#64748B' : '#94A3B8'}
-            />
-          </View>
+          {loading ? (
+            <ActivityIndicator size="large" color="#2563EB" style={{ marginTop: 40 }} />
+          ) : (
+            <>
+              {/* Title */}
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>Title</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: dynamicStyles.inputBg, color: dynamicStyles.textColor, borderColor: dynamicStyles.inputBorder }]}
+                  value={title}
+                  onChangeText={setTitle}
+                  placeholder="Enter Title"
+                  placeholderTextColor={isDarkTheme ? '#64748B' : '#94A3B8'}
+                />
+              </View>
 
-          {/* Organization */}
-          <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>Organization</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: dynamicStyles.inputBg, color: dynamicStyles.textColor, borderColor: dynamicStyles.inputBorder }]}
-              value={organization}
-              onChangeText={setOrganization}
-              placeholder="Enter Organization Name"
-              placeholderTextColor={isDarkTheme ? '#64748B' : '#94A3B8'}
-            />
-          </View>
+              {/* Organization */}
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>Organization</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: dynamicStyles.inputBg, color: dynamicStyles.textColor, borderColor: dynamicStyles.inputBorder }]}
+                  value={organization}
+                  onChangeText={setOrganization}
+                  placeholder="Enter Organization Name"
+                  placeholderTextColor={isDarkTheme ? '#64748B' : '#94A3B8'}
+                />
+              </View>
 
-          {/* Role (Optional) */}
-          <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>Role (Optional)</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: dynamicStyles.inputBg, color: dynamicStyles.textColor, borderColor: dynamicStyles.inputBorder }]}
-              value={role}
-              onChangeText={setRole}
-              placeholder="Enter Role"
-              placeholderTextColor={isDarkTheme ? '#64748B' : '#94A3B8'}
-            />
-          </View>
+              {/* Role (Optional) */}
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>Role (Optional)</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: dynamicStyles.inputBg, color: dynamicStyles.textColor, borderColor: dynamicStyles.inputBorder }]}
+                  value={role}
+                  onChangeText={setRole}
+                  placeholder="Enter Role"
+                  placeholderTextColor={isDarkTheme ? '#64748B' : '#94A3B8'}
+                />
+              </View>
 
-          {/* Dates Row */}
-          <View style={styles.row}>
-            <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-              <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>From</Text>
-              <TouchableOpacity
-                style={[styles.dropdownButton, { backgroundColor: dynamicStyles.inputBg, borderColor: dynamicStyles.inputBorder }]}
-                onPress={() => setShowFromDropdown(!showFromDropdown)}
-              >
-                <Text style={{ color: dynamicStyles.textColor }}>{fromMonth}</Text>
-                <ChevronIcon color={isDarkTheme ? '#64748B' : '#94A3B8'} />
-              </TouchableOpacity>
-              {showFromDropdown && (
-                <View style={[styles.dropdownMenu, { backgroundColor: dynamicStyles.dropdownBg, borderColor: dynamicStyles.inputBorder }]}>
-                  {months.map((m) => (
-                    <TouchableOpacity key={m} style={styles.dropdownItem} onPress={() => { setFromMonth(m); setShowFromDropdown(false); }}>
-                      <Text style={{ color: dynamicStyles.textColor }}>{m}</Text>
-                    </TouchableOpacity>
-                  ))}
+              {/* Dates Row */}
+              <View style={styles.row}>
+                <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
+                  <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>From</Text>
+                  <TouchableOpacity
+                    style={[styles.dropdownButton, { backgroundColor: dynamicStyles.inputBg, borderColor: dynamicStyles.inputBorder }]}
+                    onPress={() => setShowFromDropdown(!showFromDropdown)}
+                  >
+                    <Text style={{ color: dynamicStyles.textColor }}>{fromMonth}</Text>
+                    <ChevronIcon color={isDarkTheme ? '#64748B' : '#94A3B8'} />
+                  </TouchableOpacity>
+                  {showFromDropdown && (
+                    <View style={[styles.dropdownMenu, { backgroundColor: dynamicStyles.dropdownBg, borderColor: dynamicStyles.inputBorder }]}>
+                      {months.map((m) => (
+                        <TouchableOpacity key={m} style={styles.dropdownItem} onPress={() => { setFromMonth(m); setShowFromDropdown(false); }}>
+                          <Text style={{ color: dynamicStyles.textColor }}>{m}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
                 </View>
-              )}
-            </View>
 
-            <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
-              <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>To</Text>
-              <TouchableOpacity
-                style={[styles.dropdownButton, { backgroundColor: dynamicStyles.inputBg, borderColor: dynamicStyles.inputBorder }]}
-                onPress={() => !current && setShowToDropdown(!showToDropdown)}
-                disabled={current}
-              >
-                <Text style={{ color: current ? '#64748B' : dynamicStyles.textColor }}>{current ? 'N/A' : toMonth}</Text>
-                <ChevronIcon color={isDarkTheme ? '#64748B' : '#94A3B8'} />
-              </TouchableOpacity>
-              {showToDropdown && !current && (
-                <View style={[styles.dropdownMenu, { backgroundColor: dynamicStyles.dropdownBg, borderColor: dynamicStyles.inputBorder }]}>
-                  {months.map((m) => (
-                    <TouchableOpacity key={m} style={styles.dropdownItem} onPress={() => { setToMonth(m); setShowToDropdown(false); }}>
-                      <Text style={{ color: dynamicStyles.textColor }}>{m}</Text>
-                    </TouchableOpacity>
-                  ))}
+                <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
+                  <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>To</Text>
+                  <TouchableOpacity
+                    style={[styles.dropdownButton, { backgroundColor: dynamicStyles.inputBg, borderColor: dynamicStyles.inputBorder }]}
+                    onPress={() => !current && setShowToDropdown(!showToDropdown)}
+                    disabled={current}
+                  >
+                    <Text style={{ color: current ? '#64748B' : dynamicStyles.textColor }}>{current ? 'N/A' : toMonth}</Text>
+                    <ChevronIcon color={isDarkTheme ? '#64748B' : '#94A3B8'} />
+                  </TouchableOpacity>
+                  {showToDropdown && !current && (
+                    <View style={[styles.dropdownMenu, { backgroundColor: dynamicStyles.dropdownBg, borderColor: dynamicStyles.inputBorder }]}>
+                      {months.map((m) => (
+                        <TouchableOpacity key={m} style={styles.dropdownItem} onPress={() => { setToMonth(m); setShowToDropdown(false); }}>
+                          <Text style={{ color: dynamicStyles.textColor }}>{m}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
                 </View>
-              )}
-            </View>
-          </View>
+              </View>
 
-          {/* Current Switch */}
-          <View style={styles.toggleRow}>
-            <Text style={[styles.toggleLabel, { color: dynamicStyles.textColor }]}>Current</Text>
-            <Switch
-              value={current}
-              onValueChange={setCurrent}
-              trackColor={{ false: '#767577', true: '#2563EB' }}
-              thumbColor={current ? '#FFFFFF' : '#f4f3f4'}
-            />
-          </View>
+              {/* Current Toggle */}
+              <View style={styles.toggleRow}>
+                <Text style={[styles.toggleLabel, { color: dynamicStyles.textColor }]}>I am currently volunteering here</Text>
+                <Switch
+                  value={current}
+                  onValueChange={setCurrent}
+                  trackColor={{ false: '#767577', true: '#2563EB' }}
+                  thumbColor={current ? '#FFFFFF' : '#f4f3f4'}
+                />
+              </View>
 
-          {/* Description (Optional) */}
-          <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>Description (Optional)</Text>
-            <TextInput
-              style={[styles.input, styles.textArea, { backgroundColor: dynamicStyles.inputBg, color: dynamicStyles.textColor, borderColor: dynamicStyles.inputBorder }]}
-              value={description}
-              onChangeText={setDescription}
-              multiline
-              numberOfLines={4}
-              textAlignVertical="top"
-              placeholder="Add Text Here"
-              placeholderTextColor={isDarkTheme ? '#64748B' : '#94A3B8'}
-            />
-          </View>
+              {/* Description (Optional) */}
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>Description (Optional)</Text>
+                <TextInput
+                  style={[styles.input, styles.textArea, { backgroundColor: dynamicStyles.inputBg, color: dynamicStyles.textColor, borderColor: dynamicStyles.inputBorder }]}
+                  value={description}
+                  onChangeText={setDescription}
+                  multiline
+                  numberOfLines={4}
+                  textAlignVertical="top"
+                  placeholder="Add Text Here"
+                  placeholderTextColor={isDarkTheme ? '#64748B' : '#94A3B8'}
+                />
+              </View>
 
-          {/* Organization Website (Optional) */}
-          <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>Organization Website (Optional)</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: dynamicStyles.inputBg, color: dynamicStyles.textColor, borderColor: dynamicStyles.inputBorder }]}
-              value={website}
-              onChangeText={setWebsite}
-              placeholder="Enter URL"
-              placeholderTextColor={isDarkTheme ? '#64748B' : '#94A3B8'}
-            />
-          </View>
+              {/* Organization Website (Optional) */}
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>Organization Website (Optional)</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: dynamicStyles.inputBg, color: dynamicStyles.textColor, borderColor: dynamicStyles.inputBorder }]}
+                  value={website}
+                  onChangeText={setWebsite}
+                  placeholder="Enter URL"
+                  placeholderTextColor={isDarkTheme ? '#64748B' : '#94A3B8'}
+                />
+              </View>
 
-          {/* Save Button */}
-          <TouchableOpacity style={styles.saveButton} activeOpacity={0.8} onPress={onBackPress}>
-            <Text style={styles.saveButtonText}>Save</Text>
-          </TouchableOpacity>
+              {/* Save Button */}
+              <TouchableOpacity 
+                style={[styles.saveButton, saving && { opacity: 0.7 }]} 
+                activeOpacity={0.8} 
+                onPress={handleSave}
+                disabled={saving}
+              >
+                {saving ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <Text style={styles.saveButtonText}>Save</Text>
+                )}
+              </TouchableOpacity>
+            </>
+          )}
 
           <View style={{ height: 40 }} />
         </ScrollView>

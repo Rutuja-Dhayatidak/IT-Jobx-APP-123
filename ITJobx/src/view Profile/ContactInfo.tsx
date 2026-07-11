@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -10,7 +10,10 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
+import { viewProfileService } from '../services/viewProfile';
 
 interface ContactInfoProps {
   onBackPress: () => void;
@@ -18,9 +21,53 @@ interface ContactInfoProps {
 }
 
 export default function ContactInfo({ onBackPress, isDarkTheme = true }: ContactInfoProps) {
-  const [email, setEmail] = useState('example@gmail.com');
-  const [phone, setPhone] = useState('603.555.0123');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const data = await viewProfileService.getProfile();
+        if (data && data.success && data.profile) {
+          const userObj = data.profile.userId;
+          if (userObj) {
+            setEmail(userObj.email || '');
+            setPhone(userObj.phone || '');
+          }
+          setAddress(data.profile.location || '');
+        }
+      } catch (err: any) {
+        console.error('Error fetching contact info:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProfile();
+  }, []);
+
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      const data = await viewProfileService.updateProfile({
+        email,
+        phone,
+        location: address
+      });
+      if (data && data.success) {
+        Alert.alert('Success', 'Contact info updated successfully!');
+        onBackPress();
+      } else {
+        Alert.alert('Error', 'Failed to update contact info.');
+      }
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to update contact info.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const dynamicStyles = isDarkTheme ? darkStyles : lightStyles;
 
@@ -42,61 +89,74 @@ export default function ContactInfo({ onBackPress, isDarkTheme = true }: Contact
         </View>
 
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          {/* Email */}
-          <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>Email</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: dynamicStyles.inputBg, color: dynamicStyles.textColor, borderColor: dynamicStyles.inputBorder }]}
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              placeholder="Email Address"
-              placeholderTextColor={isDarkTheme ? '#64748B' : '#94A3B8'}
-            />
-          </View>
+          {loading ? (
+            <ActivityIndicator size="large" color="#2563EB" style={{ marginTop: 40 }} />
+          ) : (
+            <>
+              {/* Email */}
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>Email</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: dynamicStyles.inputBg, color: dynamicStyles.textColor, borderColor: dynamicStyles.inputBorder }]}
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  placeholder="Email Address"
+                  placeholderTextColor={isDarkTheme ? '#64748B' : '#94A3B8'}
+                />
+              </View>
 
-          {/* Phone Number */}
-          <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>Phone Number</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: dynamicStyles.inputBg, color: dynamicStyles.textColor, borderColor: dynamicStyles.inputBorder }]}
-              value={phone}
-              onChangeText={setPhone}
-              keyboardType="phone-pad"
-              placeholder="Phone Number"
-              placeholderTextColor={isDarkTheme ? '#64748B' : '#94A3B8'}
-            />
-          </View>
+              {/* Phone Number */}
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>Phone Number</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: dynamicStyles.inputBg, color: dynamicStyles.textColor, borderColor: dynamicStyles.inputBorder }]}
+                  value={phone}
+                  onChangeText={setPhone}
+                  keyboardType="phone-pad"
+                  placeholder="Phone Number"
+                  placeholderTextColor={isDarkTheme ? '#64748B' : '#94A3B8'}
+                />
+              </View>
 
-          {/* Address */}
-          <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>Address</Text>
-            <TextInput
-              style={[styles.input, styles.textArea, { backgroundColor: dynamicStyles.inputBg, color: dynamicStyles.textColor, borderColor: dynamicStyles.inputBorder }]}
-              value={address}
-              onChangeText={(text) => {
-                if (text.length <= 200) {
-                  setAddress(text);
-                }
-              }}
-              multiline
-              numberOfLines={4}
-              textAlignVertical="top"
-              placeholder="Enter Address"
-              placeholderTextColor={isDarkTheme ? '#64748B' : '#94A3B8'}
-            />
-            <Text style={[styles.counterText, { color: dynamicStyles.labelColor }]}>
-              {address.length}/200
-            </Text>
-          </View>
+              {/* Address */}
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>Address</Text>
+                <TextInput
+                  style={[styles.input, styles.textArea, { backgroundColor: dynamicStyles.inputBg, color: dynamicStyles.textColor, borderColor: dynamicStyles.inputBorder }]}
+                  value={address}
+                  onChangeText={(text) => {
+                    if (text.length <= 200) {
+                      setAddress(text);
+                    }
+                  }}
+                  multiline
+                  numberOfLines={4}
+                  textAlignVertical="top"
+                  placeholder="Enter Address"
+                  placeholderTextColor={isDarkTheme ? '#64748B' : '#94A3B8'}
+                />
+                <Text style={[styles.counterText, { color: dynamicStyles.labelColor }]}>
+                  {address.length}/200
+                </Text>
+              </View>
 
-          {/* Save Button */}
-          <TouchableOpacity style={styles.saveButton} activeOpacity={0.8} onPress={onBackPress}>
-            <Text style={styles.saveButtonText}>Save</Text>
-          </TouchableOpacity>
-
-          <View style={{ height: 40 }} />
+              {/* Save Button */}
+              <TouchableOpacity 
+                style={[styles.saveButton, saving && { opacity: 0.7 }]} 
+                activeOpacity={0.8} 
+                onPress={handleSave}
+                disabled={saving}
+              >
+                {saving ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <Text style={styles.saveButtonText}>Save</Text>
+                )}
+              </TouchableOpacity>
+            </>
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

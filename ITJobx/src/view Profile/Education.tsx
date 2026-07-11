@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -11,8 +11,11 @@ import {
   Switch,
   KeyboardAvoidingView,
   Platform,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import Svg, { Path, Rect } from 'react-native-svg';
+import { viewProfileService } from '../services/viewProfile';
 
 interface EducationProps {
   onBackPress: () => void;
@@ -49,12 +52,92 @@ export default function Education({ onBackPress, isDarkTheme = true }: Education
   const [grade, setGrade] = useState('');
   const [description, setDescription] = useState('');
 
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
   const [showCourseDropdown, setShowCourseDropdown] = useState(false);
   const [showFromDropdown, setShowFromDropdown] = useState(false);
   const [showToDropdown, setShowToDropdown] = useState(false);
 
   const courses = ['Computer Engineering', 'Business Administration', 'Mechanical Engineering', 'Other'];
   const months = ['Dec 2020', 'Jan 2021', 'Feb 2021', 'Mar 2021', 'Select'];
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const data = await viewProfileService.getProfile();
+        if (data && data.success && data.profile && data.profile.education && data.profile.education.length > 0) {
+          const edu = data.profile.education[0];
+          setCourse(edu.degree || '');
+          setSchool(edu.college || '');
+          if (edu.year) {
+            const parts = edu.year.split(' - ');
+            if (parts.length > 0) setFromMonth(parts[0]);
+            if (parts.length > 1) setToMonth(parts[1]);
+          }
+        }
+      } catch (err: any) {
+        console.error('Error fetching education:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProfile();
+  }, []);
+
+  const handleSave = async () => {
+    if (!course || !school) {
+      Alert.alert('Error', 'Course and School are required.');
+      return;
+    }
+    try {
+      setSaving(true);
+      const updatedEdu = {
+        degree: course,
+        college: school,
+        year: `${fromMonth} - ${toMonth}`,
+      };
+      const data = await viewProfileService.updateProfile({ education: [updatedEdu] });
+      if (data && data.success) {
+        Alert.alert('Success', 'Education updated successfully!');
+        onBackPress();
+      } else {
+        Alert.alert('Error', 'Failed to update education.');
+      }
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to update education.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    Alert.alert(
+      'Confirm Delete',
+      'Are you sure you want to delete this education entry?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setSaving(true);
+              const data = await viewProfileService.updateProfile({ education: [] });
+              if (data && data.success) {
+                Alert.alert('Deleted', 'Education entry removed.');
+                onBackPress();
+              }
+            } catch (err: any) {
+              Alert.alert('Error', err.message || 'Failed to delete education.');
+            } finally {
+              setSaving(false);
+            }
+          }
+        }
+      ]
+    );
+  };
 
   const dynamicStyles = isDarkTheme ? darkStyles : lightStyles;
 
@@ -72,148 +155,144 @@ export default function Education({ onBackPress, isDarkTheme = true }: Education
             <Text style={[styles.backArrow, { color: dynamicStyles.textColor }]}>←</Text>
           </TouchableOpacity>
           <Text style={[styles.headerTitle, { color: dynamicStyles.textColor }]}>Education</Text>
-          <TouchableOpacity style={[styles.deleteButton, { borderColor: dynamicStyles.buttonBorder }]} activeOpacity={0.7}>
+          <TouchableOpacity 
+            style={[styles.deleteButton, { borderColor: dynamicStyles.buttonBorder }]} 
+            activeOpacity={0.7}
+            onPress={handleDelete}
+          >
             <TrashIcon />
           </TouchableOpacity>
         </View>
 
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          {/* Course */}
-          <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>Course</Text>
-            <TouchableOpacity
-              style={[styles.dropdownButton, { backgroundColor: dynamicStyles.inputBg, borderColor: dynamicStyles.inputBorder }]}
-              onPress={() => setShowCourseDropdown(!showCourseDropdown)}
-            >
-              <Text style={{ color: dynamicStyles.textColor }}>{course}</Text>
-              <ChevronIcon color={isDarkTheme ? '#64748B' : '#94A3B8'} />
-            </TouchableOpacity>
-            {showCourseDropdown && (
-              <View style={[styles.dropdownMenu, { backgroundColor: dynamicStyles.dropdownBg, borderColor: dynamicStyles.inputBorder }]}>
-                {courses.map((c) => (
-                  <TouchableOpacity key={c} style={styles.dropdownItem} onPress={() => { setCourse(c); setShowCourseDropdown(false); }}>
-                    <Text style={{ color: dynamicStyles.textColor }}>{c}</Text>
-                  </TouchableOpacity>
-                ))}
+          {loading ? (
+            <ActivityIndicator size="large" color="#2563EB" style={{ marginTop: 40 }} />
+          ) : (
+            <>
+              {/* Course */}
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>Course</Text>
+                <TouchableOpacity
+                  style={[styles.dropdownButton, { backgroundColor: dynamicStyles.inputBg, borderColor: dynamicStyles.inputBorder }]}
+                  onPress={() => setShowCourseDropdown(!showCourseDropdown)}
+                >
+                  <Text style={{ color: dynamicStyles.textColor }}>{course}</Text>
+                  <ChevronIcon color={isDarkTheme ? '#64748B' : '#94A3B8'} />
+                </TouchableOpacity>
+                {showCourseDropdown && (
+                  <View style={[styles.dropdownMenu, { backgroundColor: dynamicStyles.dropdownBg, borderColor: dynamicStyles.inputBorder }]}>
+                    {courses.map((c) => (
+                      <TouchableOpacity key={c} style={styles.dropdownItem} onPress={() => { setCourse(c); setShowCourseDropdown(false); }}>
+                        <Text style={{ color: dynamicStyles.textColor }}>{c}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
               </View>
-            )}
-          </View>
 
-          {/* School */}
-          <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>School</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: dynamicStyles.inputBg, color: dynamicStyles.textColor, borderColor: dynamicStyles.inputBorder }]}
-              value={school}
-              onChangeText={setSchool}
-              placeholder="Enter School"
-              placeholderTextColor={isDarkTheme ? '#64748B' : '#94A3B8'}
-            />
-          </View>
+              {/* School */}
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>School</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: dynamicStyles.inputBg, color: dynamicStyles.textColor, borderColor: dynamicStyles.inputBorder }]}
+                  value={school}
+                  onChangeText={setSchool}
+                  placeholder="Enter School"
+                  placeholderTextColor={isDarkTheme ? '#64748B' : '#94A3B8'}
+                />
+              </View>
 
-          {/* Dates Row */}
-          <View style={styles.row}>
-            <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-              <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>From</Text>
-              <TouchableOpacity
-                style={[styles.dropdownButton, { backgroundColor: dynamicStyles.inputBg, borderColor: dynamicStyles.inputBorder }]}
-                onPress={() => setShowFromDropdown(!showFromDropdown)}
-              >
-                <Text style={{ color: dynamicStyles.textColor }}>{fromMonth}</Text>
-                <ChevronIcon color={isDarkTheme ? '#64748B' : '#94A3B8'} />
-              </TouchableOpacity>
-              {showFromDropdown && (
-                <View style={[styles.dropdownMenu, { backgroundColor: dynamicStyles.dropdownBg, borderColor: dynamicStyles.inputBorder }]}>
-                  {months.map((m) => (
-                    <TouchableOpacity key={m} style={styles.dropdownItem} onPress={() => { setFromMonth(m); setShowFromDropdown(false); }}>
-                      <Text style={{ color: dynamicStyles.textColor }}>{m}</Text>
-                    </TouchableOpacity>
-                  ))}
+              {/* Dates Row */}
+              <View style={styles.row}>
+                <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
+                  <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>From</Text>
+                  <TouchableOpacity
+                    style={[styles.dropdownButton, { backgroundColor: dynamicStyles.inputBg, borderColor: dynamicStyles.inputBorder }]}
+                    onPress={() => setShowFromDropdown(!showFromDropdown)}
+                  >
+                    <Text style={{ color: dynamicStyles.textColor }}>{fromMonth}</Text>
+                    <ChevronIcon color={isDarkTheme ? '#64748B' : '#94A3B8'} />
+                  </TouchableOpacity>
+                  {showFromDropdown && (
+                    <View style={[styles.dropdownMenu, { backgroundColor: dynamicStyles.dropdownBg, borderColor: dynamicStyles.inputBorder }]}>
+                      {months.map((m) => (
+                        <TouchableOpacity key={m} style={styles.dropdownItem} onPress={() => { setFromMonth(m); setShowFromDropdown(false); }}>
+                          <Text style={{ color: dynamicStyles.textColor }}>{m}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
                 </View>
-              )}
-            </View>
 
-            <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
-              <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>To</Text>
-              <TouchableOpacity
-                style={[styles.dropdownButton, { backgroundColor: dynamicStyles.inputBg, borderColor: dynamicStyles.inputBorder }]}
-                onPress={() => setShowToDropdown(!showToDropdown)}
-              >
-                <Text style={{ color: dynamicStyles.textColor }}>{toMonth}</Text>
-                <ChevronIcon color={isDarkTheme ? '#64748B' : '#94A3B8'} />
-              </TouchableOpacity>
-              {showToDropdown && (
-                <View style={[styles.dropdownMenu, { backgroundColor: dynamicStyles.dropdownBg, borderColor: dynamicStyles.inputBorder }]}>
-                  {months.map((m) => (
-                    <TouchableOpacity key={m} style={styles.dropdownItem} onPress={() => { setToMonth(m); setShowToDropdown(false); }}>
-                      <Text style={{ color: dynamicStyles.textColor }}>{m}</Text>
-                    </TouchableOpacity>
-                  ))}
+                <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
+                  <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>To</Text>
+                  <TouchableOpacity
+                    style={[styles.dropdownButton, { backgroundColor: dynamicStyles.inputBg, borderColor: dynamicStyles.inputBorder }]}
+                    onPress={() => setShowToDropdown(!showToDropdown)}
+                  >
+                    <Text style={{ color: dynamicStyles.textColor }}>{toMonth}</Text>
+                    <ChevronIcon color={isDarkTheme ? '#64748B' : '#94A3B8'} />
+                  </TouchableOpacity>
+                  {showToDropdown && (
+                    <View style={[styles.dropdownMenu, { backgroundColor: dynamicStyles.dropdownBg, borderColor: dynamicStyles.inputBorder }]}>
+                      {months.map((m) => (
+                        <TouchableOpacity key={m} style={styles.dropdownItem} onPress={() => { setToMonth(m); setShowToDropdown(false); }}>
+                          <Text style={{ color: dynamicStyles.textColor }}>{m}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
                 </View>
-              )}
-            </View>
-          </View>
+              </View>
 
-          {/* Graduated Toggle */}
-          <View style={styles.toggleRow}>
-            <Text style={[styles.toggleLabel, { color: dynamicStyles.textColor }]}>Graduated</Text>
-            <Switch
-              value={graduated}
-              onValueChange={setGraduated}
-              trackColor={{ false: '#767577', true: '#2563EB' }}
-              thumbColor={graduated ? '#FFFFFF' : '#f4f3f4'}
-            />
-          </View>
+              {/* Description (Optional) */}
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>Description (Optional)</Text>
+                <TextInput
+                  style={[styles.input, styles.textArea, { backgroundColor: dynamicStyles.inputBg, color: dynamicStyles.textColor, borderColor: dynamicStyles.inputBorder }]}
+                  value={description}
+                  onChangeText={(text) => {
+                    if (text.length <= 200) {
+                      setDescription(text);
+                    }
+                  }}
+                  multiline
+                  numberOfLines={4}
+                  textAlignVertical="top"
+                  placeholder="Enter Description"
+                  placeholderTextColor={isDarkTheme ? '#64748B' : '#94A3B8'}
+                />
+                <Text style={[styles.counterText, { color: dynamicStyles.labelColor }]}>
+                  {description.length}/200
+                </Text>
+              </View>
 
-          {/* Grade (Optional) */}
-          <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>Grade (Optional)</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: dynamicStyles.inputBg, color: dynamicStyles.textColor, borderColor: dynamicStyles.inputBorder }]}
-              value={grade}
-              onChangeText={setGrade}
-              placeholder="Enter Grade"
-              placeholderTextColor={isDarkTheme ? '#64748B' : '#94A3B8'}
-            />
-          </View>
+              {/* Add Media (Optional) */}
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>Add Media (Optional)</Text>
+                <TouchableOpacity
+                  style={[styles.uploadBox, { backgroundColor: dynamicStyles.inputBg, borderColor: dynamicStyles.inputBorder }]}
+                  activeOpacity={0.8}
+                >
+                  <UploadIcon />
+                </TouchableOpacity>
+              </View>
 
-          {/* Description (Optional) */}
-          <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>Description (Optional)</Text>
-            <TextInput
-              style={[styles.input, styles.textArea, { backgroundColor: dynamicStyles.inputBg, color: dynamicStyles.textColor, borderColor: dynamicStyles.inputBorder }]}
-              value={description}
-              onChangeText={(text) => {
-                if (text.length <= 200) {
-                  setDescription(text);
-                }
-              }}
-              multiline
-              numberOfLines={4}
-              textAlignVertical="top"
-              placeholder="Enter Description"
-              placeholderTextColor={isDarkTheme ? '#64748B' : '#94A3B8'}
-            />
-            <Text style={[styles.counterText, { color: dynamicStyles.labelColor }]}>
-              {description.length}/200
-            </Text>
-          </View>
-
-          {/* Add Media (Optional) */}
-          <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>Add Media (Optional)</Text>
-            <TouchableOpacity
-              style={[styles.uploadBox, { backgroundColor: dynamicStyles.inputBg, borderColor: dynamicStyles.inputBorder }]}
-              activeOpacity={0.8}
-            >
-              <UploadIcon />
-            </TouchableOpacity>
-          </View>
-
-          {/* Save Button */}
-          <TouchableOpacity style={styles.saveButton} activeOpacity={0.8} onPress={onBackPress}>
-            <Text style={styles.saveButtonText}>Save</Text>
-          </TouchableOpacity>
+              {/* Save Button */}
+              <TouchableOpacity 
+                style={[styles.saveButton, saving && { opacity: 0.7 }]} 
+                activeOpacity={0.8} 
+                onPress={handleSave}
+                disabled={saving}
+              >
+                {saving ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <Text style={styles.saveButtonText}>Save</Text>
+                )}
+              </TouchableOpacity>
+            </>
+          )}
 
           <View style={{ height: 40 }} />
         </ScrollView>

@@ -25,7 +25,7 @@ router.put(
     body("location").optional().trim(),
     body("about").optional().trim(),
     body("skills").optional().isArray().withMessage("Skills must be an array"),
-    body("gender").optional().isIn(["Male", "Female", "Other", ""]).withMessage("Invalid gender value")
+    body("gender").optional().isIn(["Male", "Female", "Other", "Prefer not to say", ""]).withMessage("Invalid gender value")
   ],
   validate,
   profileController.updateProfile

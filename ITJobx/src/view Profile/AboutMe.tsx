@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -10,7 +10,10 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
+import { viewProfileService } from '../services/viewProfile';
 
 interface AboutMeProps {
   onBackPress: () => void;
@@ -19,6 +22,41 @@ interface AboutMeProps {
 
 export default function AboutMe({ onBackPress, isDarkTheme = true }: AboutMeProps) {
   const [bio, setBio] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const data = await viewProfileService.getProfile();
+        if (data && data.success && data.profile) {
+          setBio(data.profile.about || '');
+        }
+      } catch (err: any) {
+        console.error('Error fetching profile in AboutMe:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProfile();
+  }, []);
+
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      const data = await viewProfileService.updateProfile({ about: bio });
+      if (data && data.success) {
+        Alert.alert('Success', 'About me updated successfully!');
+        onBackPress();
+      } else {
+        Alert.alert('Error', 'Failed to update about me.');
+      }
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to update about me.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const dynamicStyles = isDarkTheme ? darkStyles : lightStyles;
 
@@ -40,34 +78,47 @@ export default function AboutMe({ onBackPress, isDarkTheme = true }: AboutMeProp
         </View>
 
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          {/* Bio Input */}
-          <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>About Me</Text>
-            <TextInput
-              style={[styles.input, styles.textArea, { backgroundColor: dynamicStyles.inputBg, color: dynamicStyles.textColor, borderColor: dynamicStyles.inputBorder }]}
-              value={bio}
-              onChangeText={(text) => {
-                if (text.length <= 1000) {
-                  setBio(text);
-                }
-              }}
-              multiline
-              numberOfLines={8}
-              textAlignVertical="top"
-              placeholder="Enter Text Here"
-              placeholderTextColor={isDarkTheme ? '#64748B' : '#94A3B8'}
-            />
-            <Text style={[styles.counterText, { color: dynamicStyles.labelColor }]}>
-              {bio.length}/1000
-            </Text>
-          </View>
+          {loading ? (
+            <ActivityIndicator size="large" color="#2563EB" style={{ marginTop: 40 }} />
+          ) : (
+            <>
+              {/* Bio Input */}
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>About Me</Text>
+                <TextInput
+                  style={[styles.input, styles.textArea, { backgroundColor: dynamicStyles.inputBg, color: dynamicStyles.textColor, borderColor: dynamicStyles.inputBorder }]}
+                  value={bio}
+                  onChangeText={(text) => {
+                    if (text.length <= 1000) {
+                      setBio(text);
+                    }
+                  }}
+                  multiline
+                  numberOfLines={8}
+                  textAlignVertical="top"
+                  placeholder="Enter Text Here"
+                  placeholderTextColor={isDarkTheme ? '#64748B' : '#94A3B8'}
+                />
+                <Text style={[styles.counterText, { color: dynamicStyles.labelColor }]}>
+                  {bio.length}/1000
+                </Text>
+              </View>
 
-          {/* Save Button */}
-          <TouchableOpacity style={styles.saveButton} activeOpacity={0.8} onPress={onBackPress}>
-            <Text style={styles.saveButtonText}>Save</Text>
-          </TouchableOpacity>
-
-          <View style={{ height: 40 }} />
+              {/* Save Button */}
+              <TouchableOpacity 
+                style={[styles.saveButton, saving && { opacity: 0.7 }]} 
+                activeOpacity={0.8} 
+                onPress={handleSave}
+                disabled={saving}
+              >
+                {saving ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <Text style={styles.saveButtonText}>Save</Text>
+                )}
+              </TouchableOpacity>
+            </>
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

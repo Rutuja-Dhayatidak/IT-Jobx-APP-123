@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -11,8 +11,11 @@ import {
   Switch,
   KeyboardAvoidingView,
   Platform,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
+import { viewProfileService } from '../services/viewProfile';
 
 interface CertificatesProps {
   onBackPress: () => void;
@@ -43,10 +46,96 @@ export default function Certificates({ onBackPress, isDarkTheme = true }: Certif
   const [credentialUrl, setCredentialUrl] = useState('');
   const [credentialUrl2, setCredentialUrl2] = useState('');
 
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
   const [showIssueDropdown, setShowIssueDropdown] = useState(false);
   const [showExpiryDropdown, setShowExpiryDropdown] = useState(false);
 
   const months = ['Dec 2020', 'Jan 2021', 'Feb 2021', 'Mar 2021', 'Select'];
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const data = await viewProfileService.getProfile();
+        if (data && data.success && data.profile && data.profile.certifications && data.profile.certifications.length > 0) {
+          const cert = data.profile.certifications[0];
+          setName(cert.name || '');
+          setOrganization(cert.organization || '');
+          setIssueDate(cert.issueDate || 'Select');
+          setExpiryDate(cert.expiryDate || 'Select');
+          setNoExpiry(!!cert.noExpiry);
+          setCredentialId(cert.credentialId || '');
+          setCredentialUrl(cert.credentialUrl || '');
+          setCredentialUrl2(cert.credentialUrl2 || '');
+        }
+      } catch (err: any) {
+        console.error('Error fetching certificates:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProfile();
+  }, []);
+
+  const handleSave = async () => {
+    if (!name || !organization) {
+      Alert.alert('Error', 'Name and Organization are required.');
+      return;
+    }
+    try {
+      setSaving(true);
+      const updatedCert = {
+        name,
+        organization,
+        issueDate,
+        expiryDate: noExpiry ? 'N/A' : expiryDate,
+        noExpiry,
+        credentialId,
+        credentialUrl,
+        credentialUrl2,
+      };
+      const data = await viewProfileService.updateProfile({ certifications: [updatedCert] });
+      if (data && data.success) {
+        Alert.alert('Success', 'Certificate updated successfully!');
+        onBackPress();
+      } else {
+        Alert.alert('Error', 'Failed to update certificate.');
+      }
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to update certificate.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    Alert.alert(
+      'Confirm Delete',
+      'Are you sure you want to delete this certificate entry?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setSaving(true);
+              const data = await viewProfileService.updateProfile({ certifications: [] });
+              if (data && data.success) {
+                Alert.alert('Deleted', 'Certificate entry removed.');
+                onBackPress();
+              }
+            } catch (err: any) {
+              Alert.alert('Error', err.message || 'Failed to delete certificate.');
+            } finally {
+              setSaving(false);
+            }
+          }
+        }
+      ]
+    );
+  };
 
   const dynamicStyles = isDarkTheme ? darkStyles : lightStyles;
 
@@ -64,131 +153,150 @@ export default function Certificates({ onBackPress, isDarkTheme = true }: Certif
             <Text style={[styles.backArrow, { color: dynamicStyles.textColor }]}>←</Text>
           </TouchableOpacity>
           <Text style={[styles.headerTitle, { color: dynamicStyles.textColor }]}>Certification and Licenses</Text>
-          <TouchableOpacity style={[styles.deleteButton, { borderColor: dynamicStyles.buttonBorder }]} activeOpacity={0.7}>
+          <TouchableOpacity 
+            style={[styles.deleteButton, { borderColor: dynamicStyles.buttonBorder }]} 
+            activeOpacity={0.7}
+            onPress={handleDelete}
+          >
             <TrashIcon />
           </TouchableOpacity>
         </View>
 
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          {/* Name */}
-          <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>Name</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: dynamicStyles.inputBg, color: dynamicStyles.textColor, borderColor: dynamicStyles.inputBorder }]}
-              value={name}
-              onChangeText={setName}
-              placeholder="Name"
-              placeholderTextColor={isDarkTheme ? '#64748B' : '#94A3B8'}
-            />
-          </View>
+          {loading ? (
+            <ActivityIndicator size="large" color="#2563EB" style={{ marginTop: 40 }} />
+          ) : (
+            <>
+              {/* Name */}
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>Name</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: dynamicStyles.inputBg, color: dynamicStyles.textColor, borderColor: dynamicStyles.inputBorder }]}
+                  value={name}
+                  onChangeText={setName}
+                  placeholder="Name"
+                  placeholderTextColor={isDarkTheme ? '#64748B' : '#94A3B8'}
+                />
+              </View>
 
-          {/* Organization */}
-          <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>Organization</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: dynamicStyles.inputBg, color: dynamicStyles.textColor, borderColor: dynamicStyles.inputBorder }]}
-              value={organization}
-              onChangeText={setOrganization}
-              placeholder="Organization"
-              placeholderTextColor={isDarkTheme ? '#64748B' : '#94A3B8'}
-            />
-          </View>
+              {/* Organization */}
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>Organization</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: dynamicStyles.inputBg, color: dynamicStyles.textColor, borderColor: dynamicStyles.inputBorder }]}
+                  value={organization}
+                  onChangeText={setOrganization}
+                  placeholder="Organization"
+                  placeholderTextColor={isDarkTheme ? '#64748B' : '#94A3B8'}
+                />
+              </View>
 
-          {/* Dates Row */}
-          <View style={styles.row}>
-            <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-              <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>Issue date</Text>
-              <TouchableOpacity
-                style={[styles.dropdownButton, { backgroundColor: dynamicStyles.inputBg, borderColor: dynamicStyles.inputBorder }]}
-                onPress={() => setShowIssueDropdown(!showIssueDropdown)}
-              >
-                <Text style={{ color: dynamicStyles.textColor }}>{issueDate}</Text>
-                <ChevronIcon color={isDarkTheme ? '#64748B' : '#94A3B8'} />
-              </TouchableOpacity>
-              {showIssueDropdown && (
-                <View style={[styles.dropdownMenu, { backgroundColor: dynamicStyles.dropdownBg, borderColor: dynamicStyles.inputBorder }]}>
-                  {months.map((m) => (
-                    <TouchableOpacity key={m} style={styles.dropdownItem} onPress={() => { setIssueDate(m); setShowIssueDropdown(false); }}>
-                      <Text style={{ color: dynamicStyles.textColor }}>{m}</Text>
-                    </TouchableOpacity>
-                  ))}
+              {/* Dates Row */}
+              <View style={styles.row}>
+                <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
+                  <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>Issue date</Text>
+                  <TouchableOpacity
+                    style={[styles.dropdownButton, { backgroundColor: dynamicStyles.inputBg, borderColor: dynamicStyles.inputBorder }]}
+                    onPress={() => setShowIssueDropdown(!showIssueDropdown)}
+                  >
+                    <Text style={{ color: dynamicStyles.textColor }}>{issueDate}</Text>
+                    <ChevronIcon color={isDarkTheme ? '#64748B' : '#94A3B8'} />
+                  </TouchableOpacity>
+                  {showIssueDropdown && (
+                    <View style={[styles.dropdownMenu, { backgroundColor: dynamicStyles.dropdownBg, borderColor: dynamicStyles.inputBorder }]}>
+                      {months.map((m) => (
+                        <TouchableOpacity key={m} style={styles.dropdownItem} onPress={() => { setIssueDate(m); setShowIssueDropdown(false); }}>
+                          <Text style={{ color: dynamicStyles.textColor }}>{m}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
                 </View>
-              )}
-            </View>
 
-            <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
-              <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>Expiration Date</Text>
-              <TouchableOpacity
-                style={[styles.dropdownButton, { backgroundColor: dynamicStyles.inputBg, borderColor: dynamicStyles.inputBorder }]}
-                onPress={() => !noExpiry && setShowExpiryDropdown(!showExpiryDropdown)}
-                disabled={noExpiry}
-              >
-                <Text style={{ color: noExpiry ? '#64748B' : dynamicStyles.textColor }}>{noExpiry ? 'N/A' : expiryDate}</Text>
-                <ChevronIcon color={isDarkTheme ? '#64748B' : '#94A3B8'} />
-              </TouchableOpacity>
-              {showExpiryDropdown && !noExpiry && (
-                <View style={[styles.dropdownMenu, { backgroundColor: dynamicStyles.dropdownBg, borderColor: dynamicStyles.inputBorder }]}>
-                  {months.map((m) => (
-                    <TouchableOpacity key={m} style={styles.dropdownItem} onPress={() => { setExpiryDate(m); setShowExpiryDropdown(false); }}>
-                      <Text style={{ color: dynamicStyles.textColor }}>{m}</Text>
-                    </TouchableOpacity>
-                  ))}
+                <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
+                  <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>Expiration Date</Text>
+                  <TouchableOpacity
+                    style={[styles.dropdownButton, { backgroundColor: dynamicStyles.inputBg, borderColor: dynamicStyles.inputBorder }]}
+                    onPress={() => !noExpiry && setShowExpiryDropdown(!showExpiryDropdown)}
+                    disabled={noExpiry}
+                  >
+                    <Text style={{ color: noExpiry ? '#64748B' : dynamicStyles.textColor }}>{noExpiry ? 'N/A' : expiryDate}</Text>
+                    <ChevronIcon color={isDarkTheme ? '#64748B' : '#94A3B8'} />
+                  </TouchableOpacity>
+                  {showExpiryDropdown && !noExpiry && (
+                    <View style={[styles.dropdownMenu, { backgroundColor: dynamicStyles.dropdownBg, borderColor: dynamicStyles.inputBorder }]}>
+                      {months.map((m) => (
+                        <TouchableOpacity key={m} style={styles.dropdownItem} onPress={() => { setExpiryDate(m); setShowExpiryDropdown(false); }}>
+                          <Text style={{ color: dynamicStyles.textColor }}>{m}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
                 </View>
-              )}
-            </View>
-          </View>
+              </View>
 
-          {/* No Expiry Toggle */}
-          <View style={styles.toggleRow}>
-            <Text style={[styles.toggleLabel, { color: dynamicStyles.textColor }]}>No Expiry</Text>
-            <Switch
-              value={noExpiry}
-              onValueChange={setNoExpiry}
-              trackColor={{ false: '#767577', true: '#2563EB' }}
-              thumbColor={noExpiry ? '#FFFFFF' : '#f4f3f4'}
-            />
-          </View>
+              {/* No Expiry Toggle */}
+              <View style={styles.toggleRow}>
+                <Text style={[styles.toggleLabel, { color: dynamicStyles.textColor }]}>No Expiry</Text>
+                <Switch
+                  value={noExpiry}
+                  onValueChange={setNoExpiry}
+                  trackColor={{ false: '#767577', true: '#2563EB' }}
+                  thumbColor={noExpiry ? '#FFFFFF' : '#f4f3f4'}
+                />
+              </View>
 
-          {/* Credential ID (Optional) */}
-          <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>Credential ID (Optional)</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: dynamicStyles.inputBg, color: dynamicStyles.textColor, borderColor: dynamicStyles.inputBorder }]}
-              value={credentialId}
-              onChangeText={setCredentialId}
-              placeholder="Enter ID"
-              placeholderTextColor={isDarkTheme ? '#64748B' : '#94A3B8'}
-            />
-          </View>
+              {/* Credential ID (Optional) */}
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>Credential ID (Optional)</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: dynamicStyles.inputBg, color: dynamicStyles.textColor, borderColor: dynamicStyles.inputBorder }]}
+                  value={credentialId}
+                  onChangeText={setCredentialId}
+                  placeholder="Enter ID"
+                  placeholderTextColor={isDarkTheme ? '#64748B' : '#94A3B8'}
+                />
+              </View>
 
-          {/* Credential URL (Optional) */}
-          <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>Credential URL (Optional)</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: dynamicStyles.inputBg, color: dynamicStyles.textColor, borderColor: dynamicStyles.inputBorder }]}
-              value={credentialUrl}
-              onChangeText={setCredentialUrl}
-              placeholder="Enter URL"
-              placeholderTextColor={isDarkTheme ? '#64748B' : '#94A3B8'}
-            />
-          </View>
+              {/* Credential URL (Optional) */}
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>Credential URL (Optional)</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: dynamicStyles.inputBg, color: dynamicStyles.textColor, borderColor: dynamicStyles.inputBorder }]}
+                  value={credentialUrl}
+                  onChangeText={setCredentialUrl}
+                  placeholder="Enter URL"
+                  placeholderTextColor={isDarkTheme ? '#64748B' : '#94A3B8'}
+                />
+              </View>
 
-          {/* Credential URL 2 (Optional) */}
-          <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>Credential URL (Optional)</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: dynamicStyles.inputBg, color: dynamicStyles.textColor, borderColor: dynamicStyles.inputBorder }]}
-              value={credentialUrl2}
-              onChangeText={setCredentialUrl2}
-              placeholder="Enter URL"
-              placeholderTextColor={isDarkTheme ? '#64748B' : '#94A3B8'}
-            />
-          </View>
+              {/* Credential URL 2 (Optional) */}
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>Credential URL (Optional)</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: dynamicStyles.inputBg, color: dynamicStyles.textColor, borderColor: dynamicStyles.inputBorder }]}
+                  value={credentialUrl2}
+                  onChangeText={setCredentialUrl2}
+                  placeholder="Enter URL"
+                  placeholderTextColor={isDarkTheme ? '#64748B' : '#94A3B8'}
+                />
+              </View>
 
-          {/* Save Button */}
-          <TouchableOpacity style={styles.saveButton} activeOpacity={0.8} onPress={onBackPress}>
-            <Text style={styles.saveButtonText}>Save</Text>
-          </TouchableOpacity>
+              {/* Save Button */}
+              <TouchableOpacity 
+                style={[styles.saveButton, saving && { opacity: 0.7 }]} 
+                activeOpacity={0.8} 
+                onPress={handleSave}
+                disabled={saving}
+              >
+                {saving ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <Text style={styles.saveButtonText}>Save</Text>
+                )}
+              </TouchableOpacity>
+            </>
+          )}
 
           <View style={{ height: 40 }} />
         </ScrollView>

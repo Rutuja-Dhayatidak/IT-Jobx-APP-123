@@ -29,6 +29,14 @@ const profileSchema = new mongoose.Schema(
       type: String,
       default: ""
     },
+    gender: {
+      type: String,
+      default: ""
+    },
+    position: {
+      type: String,
+      default: ""
+    },
     skills: {
       type: [String],
       default: []
@@ -70,7 +78,36 @@ const profileSchema = new mongoose.Schema(
         duration: String
       }
     ],
-    certifications: [String],
+    certifications: [
+      {
+        name: String,
+        organization: String,
+        issueDate: String,
+        expiryDate: String,
+        noExpiry: Boolean,
+        credentialId: String,
+        credentialUrl: String,
+        credentialUrl2: String
+      }
+    ],
+    volunteer: [
+      {
+        title: String,
+        organization: String,
+        role: String,
+        duration: String,
+        description: String,
+        website: String
+      }
+    ],
+    awards: [
+      {
+        title: String,
+        organization: String,
+        dateAwarded: String,
+        description: String
+      }
+    ],
     links: {
       linkedin: { type: String, default: "" },
       github: { type: String, default: "" },
