@@ -86,6 +86,13 @@ const updateProfile = async (userId, updateData) => {
 
   let profile = await Profile.findOne({ userId });
 
+  // Automatically update userType to 'experienced' or 'fresher' based on experience records
+  const hasExperience = (cleanData.experience !== undefined)
+    ? (Array.isArray(cleanData.experience) && cleanData.experience.length > 0)
+    : (profile && Array.isArray(profile.experience) && profile.experience.length > 0);
+  
+  cleanData.userType = hasExperience ? 'experienced' : 'fresher';
+
   if (profile) {
     profile = await Profile.findOneAndUpdate(
       { userId },

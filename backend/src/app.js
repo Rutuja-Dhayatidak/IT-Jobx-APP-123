@@ -48,6 +48,7 @@ app.use("/api/enterprise/payment", require("./routes/enterprisePaymentRoutes"));
 app.use("/api/super-admin/activation", require("./routes/superAdminActivationRoutes"));
 app.use("/api/notifications", require("./routes/notificationRoutes"));
 app.use("/api/applications", require("./routes/applicationRoutes"));
+app.use("/api/chat", require("./routes/chatRoutes"));
 
 app.get("/", (req, res) => {
   res.send("App is running...");

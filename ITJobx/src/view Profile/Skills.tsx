@@ -45,7 +45,20 @@ export default function Skills({ onBackPress, isDarkTheme = true }: SkillsProps)
   const handleSave = async () => {
     try {
       setSaving(true);
-      const data = await viewProfileService.updateProfile({ skills });
+      
+      // Auto-append any pending text in input value before saving
+      let finalSkills = [...skills];
+      if (inputValue.trim()) {
+        const pending = inputValue
+          .split(',')
+          .map((s) => s.trim())
+          .filter((s) => s.length > 0 && !skills.includes(s));
+        if (pending.length > 0) {
+          finalSkills = [...finalSkills, ...pending];
+        }
+      }
+
+      const data = await viewProfileService.updateProfile({ skills: finalSkills });
       if (data && data.success) {
         Alert.alert('Success', 'Skills updated successfully!');
         onBackPress();
@@ -62,9 +75,31 @@ export default function Skills({ onBackPress, isDarkTheme = true }: SkillsProps)
   const dynamicStyles = isDarkTheme ? darkStyles : lightStyles;
 
   const handleAddSkill = () => {
-    if (inputValue.trim() && !skills.includes(inputValue.trim())) {
-      setSkills([...skills, inputValue.trim()]);
+    if (inputValue.trim()) {
+      const newSkills = inputValue
+        .split(',')
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0 && !skills.includes(s));
+      
+      if (newSkills.length > 0) {
+        setSkills([...skills, ...newSkills]);
+      }
       setInputValue('');
+    }
+  };
+
+  const handleTextChange = (text: string) => {
+    if (text.endsWith(',')) {
+      const cleanText = text.substring(0, text.length - 1).trim();
+      if (cleanText) {
+        const parts = cleanText.split(',').map(s => s.trim()).filter(s => s.length > 0 && !skills.includes(s));
+        if (parts.length > 0) {
+          setSkills([...skills, ...parts]);
+        }
+      }
+      setInputValue('');
+    } else {
+      setInputValue(text);
     }
   };
 
@@ -94,22 +129,11 @@ export default function Skills({ onBackPress, isDarkTheme = true }: SkillsProps)
             <ActivityIndicator size="large" color="#2563EB" style={{ marginTop: 40 }} />
           ) : (
             <>
-              {/* Skills Input */}
-              <View style={styles.inputGroup}>
-                <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>Skills</Text>
-                <TextInput
-                  style={[styles.input, { backgroundColor: dynamicStyles.inputBg, color: dynamicStyles.textColor, borderColor: dynamicStyles.inputBorder }]}
-                  value={inputValue}
-                  onChangeText={setInputValue}
-                  onSubmitEditing={handleAddSkill}
-                  placeholder="Type Skills"
-                  placeholderTextColor={isDarkTheme ? '#64748B' : '#94A3B8'}
-                  returnKeyType="done"
-                />
-              </View>
-
-              {/* Skills Tags Container */}
+              {/* Skills Tags Container (Rendered ABOVE the input so they stay visible when keyboard is open!) */}
               <View style={styles.tagsContainer}>
+                <Text style={[styles.label, { color: dynamicStyles.labelColor, width: '100%', marginBottom: 12 }]}>
+                  Added Skills ({skills.length})
+                </Text>
                 {skills.map((skill) => (
                   <View
                     key={skill}
@@ -125,6 +149,25 @@ export default function Skills({ onBackPress, isDarkTheme = true }: SkillsProps)
                     </TouchableOpacity>
                   </View>
                 ))}
+              </View>
+
+              {/* Skills Input */}
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>Add Skill</Text>
+                <View style={styles.inputRow}>
+                  <TextInput
+                    style={[styles.input, { flex: 1, backgroundColor: dynamicStyles.inputBg, color: dynamicStyles.textColor, borderColor: dynamicStyles.inputBorder }]}
+                    value={inputValue}
+                    onChangeText={handleTextChange}
+                    onSubmitEditing={handleAddSkill}
+                    placeholder="Type skills (e.g. React, Node, Java)"
+                    placeholderTextColor={isDarkTheme ? '#64748B' : '#94A3B8'}
+                    returnKeyType="done"
+                  />
+                  <TouchableOpacity style={styles.addButton} onPress={handleAddSkill} activeOpacity={0.8}>
+                    <Text style={styles.addButtonText}>Add</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
 
               {/* Save Button */}
@@ -196,6 +239,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     fontSize: 15,
     borderWidth: 1,
+  },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  addButton: {
+    backgroundColor: '#2563EB',
+    height: 52,
+    borderRadius: 12,
+    paddingHorizontal: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  addButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: 'bold',
   },
   tagsContainer: {
     flexDirection: 'row',

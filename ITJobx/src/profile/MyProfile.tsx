@@ -175,7 +175,6 @@ export default function MyProfile({ onBackPress, onNavigateToTab, onSettingsPres
     { title: 'Personal Information', icon: (color: string) => <UserOutlineIcon color={color} />, color: '#3B82F6', bgColor: 'rgba(59, 130, 246, 0.1)' },
     { title: 'Analytics', icon: (color: string) => <AnalyticsIcon color={color} />, color: '#10B981', bgColor: 'rgba(16, 185, 129, 0.1)' },
     { title: 'My Application', icon: (color: string) => <DocumentIcon color={color} />, color: '#8B5CF6', bgColor: 'rgba(139, 92, 246, 0.1)' },
-    { title: 'Job Seeking Status', icon: (color: string) => <StatusIcon color={color} />, color: '#F59E0B', bgColor: 'rgba(245, 158, 11, 0.1)' },
     { title: 'Settings', icon: (color: string) => <SettingsIcon color={color} />, color: '#64748B', bgColor: 'rgba(100, 116, 139, 0.1)' },
     { title: 'Language', icon: (color: string) => <GlobeIcon color={color} />, color: '#06B6D4', bgColor: 'rgba(6, 182, 212, 0.1)' },
     { title: 'Help Center', icon: (color: string) => <HelpIcon color={color} />, color: '#EC4899', bgColor: 'rgba(236, 72, 153, 0.1)' },

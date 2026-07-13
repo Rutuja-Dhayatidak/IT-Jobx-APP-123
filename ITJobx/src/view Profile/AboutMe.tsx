@@ -14,6 +14,14 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { viewProfileService } from '../services/viewProfile';
+import Svg, { Path } from 'react-native-svg';
+
+// Chevron Icon
+const ChevronIcon = ({ color }: { color: string }) => (
+  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+    <Path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z" fill={color} />
+  </Svg>
+);
 
 interface AboutMeProps {
   onBackPress: () => void;
@@ -25,12 +33,30 @@ export default function AboutMe({ onBackPress, isDarkTheme = true }: AboutMeProp
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  const [prefRole, setPrefRole] = useState('');
+  const [prefLocation, setPrefLocation] = useState('');
+  const [prefJobType, setPrefJobType] = useState('Full-Time');
+  const [prefSalary, setPrefSalary] = useState('');
+  const [showPrefJobTypeDropdown, setShowPrefJobTypeDropdown] = useState(false);
+  const jobTypes = ['Full-Time', 'Part-Time', 'Contract', 'Internship'];
+
   useEffect(() => {
     const fetchProfile = async () => {
       try {
         const data = await viewProfileService.getProfile();
         if (data && data.success && data.profile) {
           setBio(data.profile.about || '');
+
+          if (data.profile.job_preferences) {
+            setPrefRole(data.profile.job_preferences.role || '');
+            setPrefLocation(data.profile.job_preferences.location || '');
+            setPrefJobType(data.profile.job_preferences.type || 'Full-Time');
+            setPrefSalary(data.profile.job_preferences.salary || '');
+          } else {
+            setPrefRole(Array.isArray(data.profile.preferredRoles) ? data.profile.preferredRoles.join(', ') : '');
+            setPrefLocation(Array.isArray(data.profile.preferredLocations) ? data.profile.preferredLocations.join(', ') : '');
+            setPrefJobType(data.profile.preferredJobType || 'Full-Time');
+          }
         }
       } catch (err: any) {
         console.error('Error fetching profile in AboutMe:', err);
@@ -44,15 +70,29 @@ export default function AboutMe({ onBackPress, isDarkTheme = true }: AboutMeProp
   const handleSave = async () => {
     try {
       setSaving(true);
-      const data = await viewProfileService.updateProfile({ about: bio });
+      const rolesArray = prefRole.split(',').map(s => s.trim()).filter(Boolean);
+      const locationsArray = prefLocation.split(',').map(s => s.trim()).filter(Boolean);
+
+      const data = await viewProfileService.updateProfile({ 
+        about: bio,
+        job_preferences: {
+          role: prefRole,
+          location: prefLocation,
+          type: prefJobType,
+          salary: prefSalary
+        },
+        preferredRoles: rolesArray,
+        preferredLocations: locationsArray,
+        preferredJobType: prefJobType
+      });
       if (data && data.success) {
-        Alert.alert('Success', 'About me updated successfully!');
+        Alert.alert('Success', 'About me & preferences updated successfully!');
         onBackPress();
       } else {
-        Alert.alert('Error', 'Failed to update about me.');
+        Alert.alert('Error', 'Failed to update profile.');
       }
     } catch (err: any) {
-      Alert.alert('Error', err.message || 'Failed to update about me.');
+      Alert.alert('Error', err.message || 'Failed to update profile.');
     } finally {
       setSaving(false);
     }
@@ -102,6 +142,67 @@ export default function AboutMe({ onBackPress, isDarkTheme = true }: AboutMeProp
                 <Text style={[styles.counterText, { color: dynamicStyles.labelColor }]}>
                   {bio.length}/1000
                 </Text>
+              </View>
+
+              {/* Job Preferences Section */}
+              <View style={[styles.cardSeparator, { backgroundColor: dynamicStyles.dividerColor, marginVertical: 20 }]} />
+              <Text style={[styles.sectionHeading, { color: dynamicStyles.textColor, marginBottom: 16 }]}>Job Preferences</Text>
+
+              {/* Preferred Role */}
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>Preferred Role(s) (comma separated)</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: dynamicStyles.inputBg, color: dynamicStyles.textColor, borderColor: dynamicStyles.inputBorder }]}
+                  value={prefRole}
+                  onChangeText={setPrefRole}
+                  placeholder="e.g. Full Stack Developer, React Native Developer"
+                  placeholderTextColor={isDarkTheme ? '#64748B' : '#94A3B8'}
+                />
+              </View>
+
+              {/* Preferred Location */}
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>Preferred Location(s) (comma separated)</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: dynamicStyles.inputBg, color: dynamicStyles.textColor, borderColor: dynamicStyles.inputBorder }]}
+                  value={prefLocation}
+                  onChangeText={setPrefLocation}
+                  placeholder="e.g. Pune, Mumbai, Remote"
+                  placeholderTextColor={isDarkTheme ? '#64748B' : '#94A3B8'}
+                />
+              </View>
+
+              {/* Preferred Job Type */}
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>Preferred Job Type</Text>
+                <TouchableOpacity
+                  style={[styles.dropdownButton, { backgroundColor: dynamicStyles.inputBg, borderColor: dynamicStyles.inputBorder }]}
+                  onPress={() => setShowPrefJobTypeDropdown(!showPrefJobTypeDropdown)}
+                >
+                  <Text style={{ color: dynamicStyles.textColor }}>{prefJobType}</Text>
+                  <ChevronIcon color={isDarkTheme ? '#64748B' : '#94A3B8'} />
+                </TouchableOpacity>
+                {showPrefJobTypeDropdown && (
+                  <View style={[styles.dropdownMenu, { backgroundColor: dynamicStyles.dropdownBg, borderColor: dynamicStyles.inputBorder }]}>
+                    {jobTypes.map((jt) => (
+                      <TouchableOpacity key={jt} style={styles.dropdownItem} onPress={() => { setPrefJobType(jt); setShowPrefJobTypeDropdown(false); }}>
+                        <Text style={{ color: dynamicStyles.textColor }}>{jt}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+              </View>
+
+              {/* Preferred Salary */}
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>Preferred Salary Budget</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: dynamicStyles.inputBg, color: dynamicStyles.textColor, borderColor: dynamicStyles.inputBorder }]}
+                  value={prefSalary}
+                  onChangeText={setPrefSalary}
+                  placeholder="e.g. 12 LPA"
+                  placeholderTextColor={isDarkTheme ? '#64748B' : '#94A3B8'}
+                />
               </View>
 
               {/* Save Button */}
@@ -170,6 +271,35 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     fontSize: 15,
     borderWidth: 1,
+    height: 52,
+  },
+  dropdownButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    height: 52,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+  },
+  dropdownMenu: {
+    borderRadius: 12,
+    marginTop: 6,
+    borderWidth: 1,
+    overflow: 'hidden',
+    maxHeight: 200,
+  },
+  dropdownItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  cardSeparator: {
+    height: 1,
+    width: '100%',
+  },
+  sectionHeading: {
+    fontSize: 18,
+    fontWeight: 'bold',
   },
   textArea: {
     height: 200,
@@ -208,6 +338,8 @@ const darkStyles = {
   buttonBorder: 'rgba(255, 255, 255, 0.05)',
   inputBg: '#131A2E',
   inputBorder: 'rgba(255, 255, 255, 0.05)',
+  dropdownBg: '#131A2E',
+  dividerColor: 'rgba(255, 255, 255, 0.05)',
 };
 
 const lightStyles = {
@@ -218,4 +350,6 @@ const lightStyles = {
   buttonBorder: '#E2E8F0',
   inputBg: '#FFFFFF',
   inputBorder: '#E2E8F0',
+  dropdownBg: '#FFFFFF',
+  dividerColor: '#E2E8F0',
 };

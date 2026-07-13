@@ -16,3 +16,6 @@ C:/ITApp/ITJobx/android/app/.cxx/Debug/2s6k1653/armeabi-v7a/safeareacontext_auto
 C:/ITApp/ITJobx/android/app/.cxx/Debug/2s6k1653/armeabi-v7a/rnsvg_autolinked_build/CMakeFiles/react_codegen_rnsvg.dir
 C:/ITApp/ITJobx/android/app/.cxx/Debug/2s6k1653/armeabi-v7a/rnsvg_autolinked_build/CMakeFiles/edit_cache.dir
 C:/ITApp/ITJobx/android/app/.cxx/Debug/2s6k1653/armeabi-v7a/rnsvg_autolinked_build/CMakeFiles/rebuild_cache.dir
+C:/ITApp/ITJobx/android/app/.cxx/Debug/2s6k1653/armeabi-v7a/RNCWebViewSpec_autolinked_build/CMakeFiles/react_codegen_RNCWebViewSpec.dir
+C:/ITApp/ITJobx/android/app/.cxx/Debug/2s6k1653/armeabi-v7a/RNCWebViewSpec_autolinked_build/CMakeFiles/edit_cache.dir
+C:/ITApp/ITJobx/android/app/.cxx/Debug/2s6k1653/armeabi-v7a/RNCWebViewSpec_autolinked_build/CMakeFiles/rebuild_cache.dir

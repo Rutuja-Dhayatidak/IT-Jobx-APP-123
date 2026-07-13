@@ -49,6 +49,7 @@ if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   include("C:/ITApp/ITJobx/android/app/.cxx/Debug/2s6k1653/arm64-v8a/lottiereactnative_autolinked_build/cmake_install.cmake")
   include("C:/ITApp/ITJobx/android/app/.cxx/Debug/2s6k1653/arm64-v8a/safeareacontext_autolinked_build/cmake_install.cmake")
   include("C:/ITApp/ITJobx/android/app/.cxx/Debug/2s6k1653/arm64-v8a/rnsvg_autolinked_build/cmake_install.cmake")
+  include("C:/ITApp/ITJobx/android/app/.cxx/Debug/2s6k1653/arm64-v8a/RNCWebViewSpec_autolinked_build/cmake_install.cmake")
 
 endif()
 

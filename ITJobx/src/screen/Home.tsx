@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   StyleSheet,
   View,
@@ -12,10 +13,14 @@ import {
   Platform,
   Animated,
   Image,
+  Linking,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import BottomNavigation from '../components/BottomNavigation';
 import FadeInView from '../components/FadeInView';
+import SuggestedJobsSection from '../components/home/SuggestedJobsSection';
+import { getSuggestedJobs, SuggestedJob } from '../services/suggestedJobsApi';
+import { viewProfileService } from '../services/viewProfile';
 
 const { width } = Dimensions.get('window');
 
@@ -29,6 +34,12 @@ interface HomeProps {
   onNavigateToTab?: (tab: 'home' | 'portfolio' | 'saved' | 'chat' | 'profile') => void;
   isDarkTheme?: boolean;
   userLocation?: string;
+  hasUnreadNotifications?: boolean;
+  onSearch?: (query: string) => void;
+  onLocationPress?: () => void;
+  onLocationChange?: (location: string) => void;
+  savedJobs?: any[];
+  onToggleSave?: (job: any) => void;
 }
 
 const GoogleLogo = () => (
@@ -127,9 +138,100 @@ export default function Home({
   onNavigateToTab,
   isDarkTheme = true,
   userLocation,
+  hasUnreadNotifications = false,
+  onSearch,
+  onLocationPress,
+  onLocationChange,
+  savedJobs = [],
+  onToggleSave,
 }: HomeProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
+  const [customLocation, setCustomLocation] = useState(userLocation || '');
+  const [suggestedList, setSuggestedList] = useState<SuggestedJob[]>([]);
+  const [loadingSuggested, setLoadingSuggested] = useState(true);
+  const [suggestedError, setSuggestedError] = useState<string | null>(null);
+
+  const [candidateName, setCandidateName] = useState('Rutuja');
+  const [profileImage, setProfileImage] = useState('');
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) {
+      return "Good morning";
+    } else if (hour < 17) {
+      return "Good afternoon";
+    } else {
+      return "Good evening";
+    }
+  };
+
+  const fetchSuggested = async () => {
+    try {
+      setLoadingSuggested(true);
+      setSuggestedError(null);
+      const res = await getSuggestedJobs();
+      if (res && res.success) {
+        setSuggestedList(res.jobs || []);
+      } else {
+        setSuggestedError(res.message || 'Failed to load suggestions');
+      }
+    } catch (err: any) {
+      setSuggestedError(err.message || 'Failed to fetch suggested jobs');
+    } finally {
+      setLoadingSuggested(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchSuggested();
+
+    const loadUser = async () => {
+      try {
+        const savedUser = await AsyncStorage.getItem('user');
+        if (savedUser) {
+          const parsed = JSON.parse(savedUser);
+          if (parsed) {
+            let fullName = parsed.name || '';
+            if (!fullName && parsed.firstName) {
+              fullName = parsed.firstName + (parsed.lastName ? ' ' + parsed.lastName : '');
+            }
+            if (fullName) {
+              setCandidateName(fullName);
+            }
+          }
+        }
+
+        const profileRes = await viewProfileService.getProfile();
+        if (profileRes && profileRes.success && profileRes.profile) {
+          const u = profileRes.profile.userId;
+          if (u) {
+            let fullName = '';
+            if (u.firstName) {
+              fullName += u.firstName;
+            }
+            if (u.lastName) {
+              fullName += (fullName ? ' ' : '') + u.lastName;
+            }
+            if (fullName) {
+              setCandidateName(fullName);
+            }
+          }
+          if (profileRes.profile.profileImage) {
+            setProfileImage(profileRes.profile.profileImage);
+          }
+        }
+      } catch (err) {
+        console.error('Error loading user in Home:', err);
+      }
+    };
+    loadUser();
+  }, []);
+
+  useEffect(() => {
+    setCustomLocation(userLocation || '');
+  }, [userLocation]);
+
   const [activeTab, setActiveTab] = useState<'home' | 'portfolio' | 'saved' | 'chat' | 'profile'>('home');
 
   // Animation values
@@ -308,6 +410,12 @@ export default function Home({
       name: 'HR &\nRecruitment',
       icon: <UserIcon />,
       bgColor: '#8B5CF6'
+    },
+    {
+      id: 'c7',
+      name: 'Full Stack\nDeveloper',
+      icon: <CodeIcon />,
+      bgColor: '#F43F5E'
     }
   ];
 
@@ -317,19 +425,22 @@ export default function Home({
       id: 'cr1',
       title: 'How to prepare for a\ntechnical interview',
       image: require('../assets/technical_interview.png'),
-      readTime: '5 min read'
+      readTime: '5 min read',
+      url: 'https://youtu.be/eyI5WkbSckI?si=KYXUwdb_eBA45RYS'
     },
     {
       id: 'cr2',
       title: 'Tips to build a\nstrong resume',
       image: require('../assets/resume_building.png'),
-      readTime: '6 min read'
+      readTime: '6 min read',
+      url: 'https://youtu.be/qhocVNbvNHs?si=qN3adsvn-nX5Dqnh'
     },
     {
       id: 'cr3',
-      title: 'Top in-demand skills\nin 2024',
+      title: 'Top in-demand skills\nin 2026',
       image: require('../assets/indemand_skills.png'),
-      readTime: '4 min read'
+      readTime: '4 min read',
+      url: 'https://youtu.be/xhN8f3YIty0?si=82r5KSv1auVnJoMn'
     }
   ];
 
@@ -337,141 +448,149 @@ export default function Home({
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: dynamicStyles.backgroundColor }]}>
-      <StatusBar barStyle="light-content" backgroundColor="#1E3A8A" />
+      <StatusBar barStyle={isDarkTheme ? 'light-content' : 'dark-content'} backgroundColor={isDarkTheme ? '#0B0F19' : '#F8FAFC'} />
       <FadeInView style={{ flex: 1 }}>
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-          {/* Blue Header Section */}
-          <Animated.View style={[styles.headerSection, { opacity: fadeAnim, transform: [{ translateY: translateYHeader }] }]}>
+          {/* Blue/Themed Header Section */}
+          <Animated.View style={[styles.headerSection, { backgroundColor: isDarkTheme ? '#0F172A' : '#1E3A8A', opacity: fadeAnim, transform: [{ translateY: translateYHeader }] }]}>
             <View style={styles.headerTopRow}>
-              {/* Location Selector */}
-              <TouchableOpacity style={styles.locationContainer} activeOpacity={0.7}>
-                <View style={styles.locationIconWrapper}>
-                  <Svg width={18} height={18} viewBox="0 0 24 24" fill="#F59E0B">
-                    <Path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
-                  </Svg>
-                </View>
-                <View style={styles.locationTextContainer}>
-                  <Text style={styles.locationLabel}>Location</Text>
-                  <View style={styles.locationValueRow}>
-                    <Text style={styles.locationValue}>{userLocation || 'New York, USA'}</Text>
-                    <Text style={styles.arrowDown}>⏷</Text>
-                  </View>
-                </View>
-              </TouchableOpacity>
+              {/* Left Column: Greeting, Title, Subtitle */}
+              <View style={styles.greetingCol}>
+                <Text style={[styles.greetingText, { color: 'rgba(255, 255, 255, 0.8)' }]}>
+                  {getGreeting()}, {candidateName} 👋
+                </Text>
+                <Text style={[styles.mainTitle, { color: '#FFFFFF' }]}>
+                  Find <Text style={{ color: '#FBBF24', fontWeight: '800' }}>IT</Text> Jobs
+                </Text>
+                <Text style={[styles.subtitleText, { color: 'rgba(255, 255, 255, 0.6)' }]}>
+                  Discover jobs that match your skills
+                </Text>
+              </View>
 
-              {/* Notification Badge */}
-              <TouchableOpacity
-                style={styles.notificationButton}
-                onPress={onNotificationPress}
-                activeOpacity={0.7}
-              >
-                <Svg width={24} height={24} viewBox="0 0 24 24" fill="#FFFFFF">
-                  <Path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1-1.5-1s-1.5.17-1.5 1v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" />
-                </Svg>
-                <View style={styles.notificationDot} />
-              </TouchableOpacity>
+              {/* Right Column: Notification Bell & Profile Avatar */}
+              <View style={styles.headerRightCol}>
+                {/* Notification Bell */}
+                <TouchableOpacity
+                  style={[styles.notificationButton, { backgroundColor: 'rgba(255, 255, 255, 0.1)' }]}
+                  onPress={onNotificationPress}
+                  activeOpacity={0.7}
+                >
+                  <Svg width={24} height={24} viewBox="0 0 24 24" fill="#FFFFFF">
+                    <Path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1-1.5-1s-1.5.17-1.5 1v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" />
+                  </Svg>
+                  {hasUnreadNotifications && <View style={[styles.notificationDot, { backgroundColor: '#EF4444' }]} />}
+                </TouchableOpacity>
+
+                {/* Profile Image Avatar */}
+                <TouchableOpacity onPress={onProfilePress} activeOpacity={0.8} style={[styles.avatarWrapper, { borderColor: 'rgba(255, 255, 255, 0.2)' }]}>
+                  {profileImage ? (
+                    <Image source={{ uri: profileImage }} style={styles.avatarImage} />
+                  ) : (
+                    <View style={[styles.avatarInner, { backgroundColor: '#FFFFFF' }]}>
+                      <Text style={[styles.avatarInitials, { color: '#1E3A8A' }]}>{candidateName.charAt(0).toUpperCase()}</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              </View>
             </View>
 
             {/* Search & Filter Row */}
-            <View style={styles.searchFilterRow}>
-              {/* Search Input */}
-              <View style={styles.searchBar}>
-                <Text style={styles.searchIcon}>🔍</Text>
-                <TextInput
-                  style={styles.searchInput}
-                  placeholder="Search"
-                  placeholderTextColor="#94A3B8"
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                />
+            <View style={styles.searchFilterContainer}>
+              <View style={styles.searchBarRow}>
+                {/* Search Input */}
+                <View style={[styles.searchBar, { backgroundColor: isDarkTheme ? '#1E293B' : '#FFFFFF', borderColor: isDarkTheme ? '#334155' : '#E2E8F0' }, searchQuery.trim().length === 0 && { marginRight: 12 }]}>
+                  <TouchableOpacity onPress={() => onSearch && onSearch(searchQuery)} activeOpacity={0.7} style={{ padding: 4 }}>
+                    <Text style={styles.searchIcon}>🔍</Text>
+                  </TouchableOpacity>
+                  <TextInput
+                    style={[styles.searchInput, { paddingLeft: 4, color: isDarkTheme ? '#F8FAFC' : '#0F172A' }]}
+                    placeholder="Search for your dream job..."
+                    placeholderTextColor="#94A3B8"
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    returnKeyType="search"
+                    onSubmitEditing={() => onSearch && onSearch(searchQuery)}
+                  />
+                  {searchQuery.length > 0 && (
+                    <TouchableOpacity onPress={() => setSearchQuery('')} activeOpacity={0.7} style={{ padding: 8 }}>
+                      <Text style={{ color: '#94A3B8', fontSize: 16 }}>✕</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+
+                {/* Show filter button on the right of search bar ONLY if not typing */}
+                {searchQuery.trim().length === 0 && (
+                  <TouchableOpacity
+                    style={styles.filterButton}
+                    onPress={onFilterPress}
+                    activeOpacity={0.8}
+                  >
+                    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+                      <Path
+                        d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"
+                        fill="#0F172A"
+                      />
+                    </Svg>
+                  </TouchableOpacity>
+                )}
               </View>
 
-              {/* Yellow Filter Button */}
-              <TouchableOpacity
-                style={styles.filterButton}
-                onPress={onFilterPress}
-                activeOpacity={0.8}
-              >
-                <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-                  <Path
-                    d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"
-                    fill="#0F172A"
-                  />
-                </Svg>
-              </TouchableOpacity>
+              {/* If user is typing, show location bar and filter button in the second row */}
+              {searchQuery.trim().length > 0 && (
+                <View style={styles.secondFilterRow}>
+                  <View style={styles.locationSelectorBar}>
+                    <View style={styles.locationPinIconWrapper}>
+                      <Svg width={20} height={20} viewBox="0 0 24 24" fill="#F59E0B">
+                        <Path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                      </Svg>
+                    </View>
+                    <TextInput
+                      style={styles.locationSelectorBarInput}
+                      placeholder="Enter location manually..."
+                      placeholderTextColor="#94A3B8"
+                      value={customLocation}
+                      onChangeText={(text) => {
+                        setCustomLocation(text);
+                        onLocationChange && onLocationChange(text);
+                      }}
+                    />
+                    <TouchableOpacity onPress={onLocationPress} activeOpacity={0.7} style={{ padding: 4 }}>
+                      <Text style={styles.locationSelectorArrow}>⏷</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  <TouchableOpacity
+                    style={styles.filterButton}
+                    onPress={onFilterPress}
+                    activeOpacity={0.8}
+                  >
+                    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+                      <Path
+                        d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"
+                        fill="#0F172A"
+                      />
+                    </Svg>
+                  </TouchableOpacity>
+                </View>
+              )}
             </View>
           </Animated.View>
 
           {/* Suggested Jobs Section */}
           <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: translateYContent }] }}>
-            <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: dynamicStyles.textColor }]}>Suggested Jobs</Text>
-              <TouchableOpacity onPress={onSeeAllSuggested} activeOpacity={0.7}>
-                <Text style={styles.seeAllText}>See all</Text>
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.horizontalScroll}
-            >
-              {suggestedJobs.map((job) => (
-                <TouchableOpacity
-                  key={job.id}
-                  style={[styles.jobCard, { backgroundColor: dynamicStyles.cardBg, borderColor: dynamicStyles.cardBorder }]}
-                  onPress={() => onJobPress && onJobPress(job)}
-                  activeOpacity={0.9}
-                >
-                  <View style={styles.jobCardHeader}>
-                    <View style={[styles.companyLogo, { backgroundColor: job.logoBg }]}>
-                      <Text style={styles.companyLogoText}>{job.logo}</Text>
-                    </View>
-                    <View style={styles.jobTitleWrapper}>
-                      <Text style={[styles.jobTitle, { color: dynamicStyles.textColor }]}>{job.title}</Text>
-                      <Text style={styles.companyName}>{job.company}</Text>
-                    </View>
-                    <TouchableOpacity style={styles.bookmarkButton} activeOpacity={0.7}>
-                      <Svg width={20} height={20} viewBox="0 0 24 24" fill="#2563EB">
-                        <Path d="M17 3H7c-1.1 0-1.99.9-1.99 2L5 21l7-3 7 3V5c0-1.1-.9-2-2-2z" />
-                      </Svg>
-                    </TouchableOpacity>
-                  </View>
-
-                  <View style={styles.locationRow}>
-                    <Text style={styles.locationPin}>📍</Text>
-                    <Text style={styles.cardLocationText}>{job.location}</Text>
-                  </View>
-
-                  <View style={styles.tagsContainer}>
-                    <View style={[styles.tagBadge, { backgroundColor: dynamicStyles.tagBg }]}>
-                      <Text style={[styles.tagText, { color: dynamicStyles.tagTextColor }]}>{job.type}</Text>
-                    </View>
-                    <View style={[styles.tagBadge, { backgroundColor: dynamicStyles.tagBg }]}>
-                      <Text style={[styles.tagText, { color: dynamicStyles.tagTextColor }]}>{job.workplace}</Text>
-                    </View>
-                    <View style={[styles.tagBadge, { backgroundColor: dynamicStyles.tagBg }]}>
-                      <Text style={[styles.tagText, { color: dynamicStyles.tagTextColor }]}>{job.experience}</Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.jobCardFooter}>
-                    <View style={styles.applicantsWrapper}>
-                      <View style={styles.avatarStack}>
-                        <View style={[styles.miniAvatar, { backgroundColor: '#F43F5E', zIndex: 3, borderColor: dynamicStyles.avatarBorder }]} />
-                        <View style={[styles.miniAvatar, { backgroundColor: '#3B82F6', zIndex: 2, marginLeft: -8, borderColor: dynamicStyles.avatarBorder }]} />
-                        <View style={[styles.miniAvatar, { backgroundColor: '#10B981', zIndex: 1, marginLeft: -8, borderColor: dynamicStyles.avatarBorder }]} />
-                      </View>
-                      <Text style={styles.applicantsText}>{job.applicants} Applicants</Text>
-                    </View>
-                    <Text style={styles.salaryText}>
-                      {job.salary}
-                      <Text style={styles.salaryUnit}>/month</Text>
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+            <SuggestedJobsSection
+              jobs={suggestedList}
+              loading={loadingSuggested}
+              error={suggestedError}
+              onRetry={fetchSuggested}
+              onJobPress={(job) => onJobPress && onJobPress(job)}
+              onApplyPress={(job) => onJobPress && onJobPress(job)}
+              onSavePress={(job) => onToggleSave && onToggleSave(job)}
+              savedJobIds={savedJobs.map(j => j._id || j.id)}
+              onExploreAllPress={() => onNavigateToTab && onNavigateToTab('portfolio')}
+              onUpdateProfilePress={() => onNavigateToTab && onNavigateToTab('profile')}
+              isDarkTheme={isDarkTheme} // Pass proper dark theme flag
+            />
           </Animated.View>
 
           {/* Top Companies Hiring Section */}
@@ -532,6 +651,10 @@ export default function Home({
                       <TouchableOpacity
                         style={[styles.categoryCard, { backgroundColor: dynamicStyles.cardBg, borderColor: dynamicStyles.cardBorder }]}
                         activeOpacity={0.8}
+                        onPress={() => {
+                          const query = item1.name.replace('\n', ' ');
+                          onSearch && onSearch(query);
+                        }}
                       >
                         <View style={[styles.categoryIconWrapper, { backgroundColor: item1.bgColor }]}>
                           {item1.icon}
@@ -545,6 +668,10 @@ export default function Home({
                       <TouchableOpacity
                         style={[styles.categoryCard, { backgroundColor: dynamicStyles.cardBg, borderColor: dynamicStyles.cardBorder }]}
                         activeOpacity={0.8}
+                        onPress={() => {
+                          const query = item2.name.replace('\n', ' ');
+                          onSearch && onSearch(query);
+                        }}
                       >
                         <View style={[styles.categoryIconWrapper, { backgroundColor: item2.bgColor }]}>
                           {item2.icon}
@@ -661,11 +788,18 @@ export default function Home({
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.horizontalScroll}
             >
-              {careerResources.map((resource) => (
+              {careerResources.map((resource: any) => (
                 <TouchableOpacity
                   key={resource.id}
                   style={[styles.resourceCard, { backgroundColor: dynamicStyles.cardBg, borderColor: dynamicStyles.cardBorder }]}
                   activeOpacity={0.9}
+                  onPress={() => {
+                    if (resource.url) {
+                      Linking.openURL(resource.url).catch((err) =>
+                        console.error('An error occurred opening video link:', err)
+                      );
+                    }
+                  }}
                 >
                   <Image source={resource.image} style={styles.resourceImage} resizeMode="cover" />
                   <View style={styles.resourceDetails}>
@@ -699,58 +833,67 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerSection: {
-    backgroundColor: '#1E3A8A',
     borderBottomLeftRadius: 32,
     borderBottomRightRadius: 32,
     paddingHorizontal: 24,
     paddingTop: Platform.OS === 'ios' ? 20 : 40,
-    paddingBottom: 36,
+    paddingBottom: 28,
   },
   headerTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 28,
+    marginBottom: 20,
   },
-  locationContainer: {
+  greetingCol: {
+    flex: 1,
+    paddingRight: 12,
+  },
+  greetingText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  mainTitle: {
+    fontSize: 26,
+    fontWeight: '800',
+    marginTop: 4,
+    marginBottom: 4,
+  },
+  subtitleText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  headerRightCol: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  locationIconWrapper: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  avatarWrapper: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 2,
+    marginLeft: 12,
+    overflow: 'hidden',
+  },
+  avatarInner: {
+    flex: 1,
+    backgroundColor: '#6366F1',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  locationTextContainer: {
-    marginLeft: 12,
+  avatarImage: {
+    width: '100%',
+    height: '100%',
   },
-  locationLabel: {
-    color: 'rgba(255, 255, 255, 0.6)',
-    fontSize: 12,
-  },
-  locationValueRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 2,
-  },
-  locationValue: {
+  avatarInitials: {
     color: '#FFFFFF',
-    fontWeight: 'bold',
-    fontSize: 15,
-  },
-  arrowDown: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    marginLeft: 6,
+    fontSize: 16,
+    fontWeight: '800',
   },
   notificationButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
@@ -762,13 +905,20 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#EF4444',
   },
-  searchFilterRow: {
+  searchFilterContainer: {
+    width: '100%',
+  },
+  searchBarRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  searchBar: {
+  secondFilterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  locationSelectorBar: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
@@ -777,6 +927,36 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingHorizontal: 16,
     marginRight: 12,
+  },
+  locationPinIconWrapper: {
+    marginRight: 10,
+  },
+  locationSelectorBarText: {
+    flex: 1,
+    color: '#0F172A',
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  locationSelectorBarInput: {
+    flex: 1,
+    color: '#0F172A',
+    fontSize: 15,
+    paddingVertical: 4,
+  },
+  locationSelectorArrow: {
+    color: '#64748B',
+    fontSize: 12,
+  },
+  searchBar: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 52,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 14,
+    paddingHorizontal: 16,
   },
   searchIcon: {
     fontSize: 18,

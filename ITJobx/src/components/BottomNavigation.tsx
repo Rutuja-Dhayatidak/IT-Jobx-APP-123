@@ -9,6 +9,7 @@ interface BottomNavigationProps {
   onTabPress: (tab: 'home' | 'portfolio' | 'saved' | 'chat' | 'profile') => void;
   onPlusPress?: () => void;
   isDarkTheme?: boolean;
+  chatBadgeCount?: number;
 }
 
 // App-specific Icons
@@ -44,7 +45,7 @@ const ProfileIcon = ({ color }: { color: string }) => (
   </Svg>
 );
 
-export default function BottomNavigation({ activeTab, onTabPress, isDarkTheme = false }: BottomNavigationProps) {
+export default function BottomNavigation({ activeTab, onTabPress, isDarkTheme = false, chatBadgeCount }: BottomNavigationProps) {
   const dynamicStyles = isDarkTheme ? darkStyles : lightStyles;
 
   // Map active tab to slot index for 5 tabs
@@ -107,6 +108,13 @@ export default function BottomNavigation({ activeTab, onTabPress, isDarkTheme = 
             <Text style={styles.activeText} numberOfLines={1}>
               {label}
             </Text>
+          )}
+          {tabName === 'chat' && chatBadgeCount !== undefined && chatBadgeCount > 0 && (
+            <View style={styles.badgeContainer}>
+              <Text style={styles.badgeText}>
+                {chatBadgeCount > 99 ? '99+' : chatBadgeCount}
+              </Text>
+            </View>
           )}
         </View>
       </TouchableOpacity>
@@ -196,6 +204,23 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginLeft: 5,
     textTransform: 'lowercase',
+  },
+  badgeContainer: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: '#EF4444',
+    borderRadius: 8,
+    minWidth: 16,
+    height: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 3,
+  },
+  badgeText: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontWeight: '700',
   },
 });
 

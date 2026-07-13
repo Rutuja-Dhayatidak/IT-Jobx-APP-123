@@ -21,6 +21,9 @@ const jobSchema = new Schema({
     required: true
   },
   skills:       [{ type: String, trim: true }],
+  minimumExperienceMonths: { type: Number, default: 0 },
+  maximumExperienceMonths: { type: Number, default: 0 },
+  isActive:     { type: Boolean, default: true },
   description:  { type: String, required: true, minlength: 100 },
   openings:     { type: Number, default: 1, min: 1 },
   deadline:     { type: Date },

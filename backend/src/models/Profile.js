@@ -113,6 +113,10 @@ const profileSchema = new mongoose.Schema(
       github: { type: String, default: "" },
       portfolio: { type: String, default: "" }
     },
+    experienceInMonths: { type: Number, default: 0 },
+    preferredRoles:     { type: [String], default: [] },
+    preferredLocations: { type: [String], default: [] },
+    preferredJobType:   { type: String, default: "" },
     job_preferences: {
       role: { type: String, default: "" },
       location: { type: String, default: "" },

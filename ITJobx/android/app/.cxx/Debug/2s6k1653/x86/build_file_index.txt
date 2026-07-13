@@ -3,4 +3,5 @@ C:\ITApp\ITJobx\node_modules\@react-native-documents\picker\android\build\genera
 C:\ITApp\ITJobx\node_modules\lottie-react-native\android\build\generated\source\codegen\jni\CMakeLists.txt
 C:\ITApp\ITJobx\node_modules\react-native-safe-area-context\android\src\main\jni\CMakeLists.txt
 C:\ITApp\ITJobx\node_modules\react-native-svg\android\src\main\jni\CMakeLists.txt
+C:\ITApp\ITJobx\node_modules\react-native-webview\android\build\generated\source\codegen\jni\CMakeLists.txt
 C:\ITApp\ITJobx\node_modules\react-native\ReactAndroid\cmake-utils\default-app-setup\CMakeLists.txt

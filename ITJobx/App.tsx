@@ -33,6 +33,9 @@ import Resume from './src/view Profile/Resume';
 import MyApplication from './src/profile/MyApplication';
 import Notification from './src/screen/Notification';
 import FindJob from './src/screen/FindJob';
+import Chat from './src/screen/Chat';
+import CandidateSupportScreen from './src/screen/chat/CandidateSupportScreen';
+import { chatApi } from './src/services/chatApi';
 import Filter from './src/screen/Filter';
 import JobDetail from './src/screen/JobDetail';
 import ApplyJob from './src/screen/ApplyJob';
@@ -40,7 +43,7 @@ import Bookmark from './src/screen/Bookmark';
 import PrivacyPolicy from './src/profile/PrivacyPolicy';
 import BottomNavigation from './src/components/BottomNavigation';
 import JobStatus from './src/screen/JobStatus';
-import { setToken } from './src/services/api';
+import { setToken, apiRequest } from './src/services/api';
 
 type ScreenName =
   | 'onboarding'
@@ -78,7 +81,9 @@ type ScreenName =
   | 'bookmark'
   | 'languages'
   | 'apply_job'
-  | 'privacy_policy';
+  | 'privacy_policy'
+  | 'chat'
+  | 'candidate_support';
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState<ScreenName>('onboarding');
@@ -93,6 +98,10 @@ function App() {
   const [userLocation, setUserLocation] = useState('New York, USA');
   const [savedJobs, setSavedJobs] = useState<any[]>([]);
   const [selectedApplication, setSelectedApplication] = useState<any>(null);
+  const [appliedFilters, setAppliedFilters] = useState<any>(null);
+  const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
+  const [supportUnreadCount, setSupportUnreadCount] = useState(0);
+  const [homeSearchQuery, setHomeSearchQuery] = useState('');
   const [isLoadingSession, setIsLoadingSession] = useState(true);
 
   // Load persistent login session on startup
@@ -146,6 +155,28 @@ function App() {
   useEffect(() => {
     setToken(authToken);
   }, [authToken]);
+
+  const checkUnreadNotifications = async () => {
+    try {
+      if (authToken) {
+        const data = await apiRequest('/notifications/unread-count', { method: 'GET' });
+        if (data && data.success) {
+          setHasUnreadNotifications(data.count > 0);
+        }
+
+        const chatData = await chatApi.getUnreadCount();
+        if (chatData && chatData.success) {
+          setSupportUnreadCount(chatData.unreadCount);
+        }
+      }
+    } catch (err) {
+      console.error('Error checking unread notifications:', err);
+    }
+  };
+
+  useEffect(() => {
+    checkUnreadNotifications();
+  }, [authToken, currentScreen]);
 
   // Navigate to a new screen and add to history stack
   const navigateTo = (screen: ScreenName) => {
@@ -296,12 +327,30 @@ function App() {
         <Home
           isDarkTheme={isDarkTheme}
           userLocation={userLocation}
+          hasUnreadNotifications={hasUnreadNotifications}
           onProfilePress={() => navigateTo('myprofile')}
           onNotificationPress={() => navigateTo('notification')}
           onFilterPress={() => navigateTo('filter')}
+          onLocationPress={() => navigateTo('location')}
+          onLocationChange={(loc) => setUserLocation(loc)}
+          onSeeAllSuggested={() => navigateTo('find_job')}
+          onSeeAllRecent={() => navigateTo('find_job')}
+          onSearch={(query) => {
+            setHomeSearchQuery(query);
+            navigateTo('find_job');
+          }}
           onJobPress={(job) => {
             setSelectedJob(job);
             navigateTo('job_detail');
+          }}
+          savedJobs={savedJobs}
+          onToggleSave={(job) => {
+            const isAlreadySaved = savedJobs.some((j) => (j._id || j.id) === (job._id || job.id));
+            if (isAlreadySaved) {
+              setSavedJobs((prev) => prev.filter((j) => (j._id || j.id) !== (job._id || job.id)));
+            } else {
+              setSavedJobs((prev) => [...prev, job]);
+            }
           }}
           onNavigateToTab={(tab) => {
             if (tab === 'profile') {
@@ -470,11 +519,16 @@ function App() {
       )}
       {currentScreen === 'find_job' && (
         <FindJob
-          onBackPress={() => goBack()}
+          onBackPress={() => {
+            setHomeSearchQuery('');
+            goBack();
+          }}
           isDarkTheme={isDarkTheme}
           initialTab={findJobInitialTab}
           onFilterPress={() => navigateTo('filter')}
           savedJobs={savedJobs}
+          filters={appliedFilters}
+          initialSearchQuery={homeSearchQuery}
           onToggleSave={(job) => {
             const companyName = job.company || job.companyId?.name || 'Company';
             const mappedJob = {
@@ -535,7 +589,12 @@ function App() {
           isDarkTheme={isDarkTheme}
           onApply={(filters) => {
             console.log('Applied filters:', filters);
+            setAppliedFilters(filters);
+            const prevScreen = screenHistory[screenHistory.length - 2];
             goBack();
+            if (prevScreen === 'home') {
+              navigateTo('find_job');
+            }
           }}
         />
       )}
@@ -584,16 +643,23 @@ function App() {
           }}
         />
       )}
-      {['home', 'find_job', 'bookmark', 'notification', 'myprofile'].includes(currentScreen) && (
+      {currentScreen === 'candidate_support' && (
+        <CandidateSupportScreen
+          isDarkTheme={isDarkTheme}
+          onBackPress={() => goBack()}
+        />
+      )}
+      {['home', 'find_job', 'bookmark', 'myprofile', 'candidate_support'].includes(currentScreen) && (
         <BottomNavigation
           activeTab={
             currentScreen === 'home' ? 'home' :
             currentScreen === 'find_job' ? 'portfolio' :
             currentScreen === 'bookmark' ? 'saved' :
-            currentScreen === 'notification' ? 'chat' :
+            currentScreen === 'candidate_support' ? 'chat' :
             'profile'
           }
           isDarkTheme={isDarkTheme}
+          chatBadgeCount={supportUnreadCount}
           onTabPress={(tab) => {
             if (tab === 'home') {
               navigateTo('home');
@@ -603,7 +669,7 @@ function App() {
             } else if (tab === 'saved') {
               navigateTo('bookmark');
             } else if (tab === 'chat') {
-              navigateTo('notification');
+              navigateTo('candidate_support');
             } else if (tab === 'profile') {
               if (!authToken) {
                 navigateTo('login');

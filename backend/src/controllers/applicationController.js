@@ -163,13 +163,42 @@ exports.updateApplicationStatus = async (req, res) => {
       return res.status(400).json({ message: "Invalid application status" });
     }
 
-    const application = await JobApplication.findById(id);
+    const application = await JobApplication.findById(id).populate('jobId');
     if (!application) {
       return res.status(404).json({ message: "Application not found" });
     }
 
     application.status = status;
     await application.save();
+
+    // Create Notification for the Candidate
+    let notiType = "proposal_accepted";
+    let notiTitle = "Application Accepted!";
+    let notiMessage = `Congratulations! Your application for the job "${application.jobId?.title || 'Position'}" has been accepted.`;
+
+    if (status === 'rejected') {
+      notiType = "proposal_rejected";
+      notiTitle = "Application Status Update";
+      notiMessage = `Thank you for applying. Unfortunately, your application for the job "${application.jobId?.title || 'Position'}" has been rejected.`;
+    } else if (status === 'interviewing') {
+      notiType = "demo_scheduled";
+      notiTitle = "Interview Scheduled";
+      notiMessage = `Great news! You have been selected for an interview for the job "${application.jobId?.title || 'Position'}".`;
+    } else if (status === 'under_review') {
+      notiType = "change_request";
+      notiTitle = "Application Under Review";
+      notiMessage = `Your application for the job "${application.jobId?.title || 'Position'}" is now under review.`;
+    }
+
+    if (status !== 'applied') {
+      await Notification.create({
+        recipient: application.candidateId,
+        title: notiTitle,
+        message: notiMessage,
+        type: notiType,
+        relatedId: application._id
+      });
+    }
 
     res.json({
       success: true,

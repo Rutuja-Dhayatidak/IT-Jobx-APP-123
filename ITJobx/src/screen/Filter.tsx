@@ -107,229 +107,229 @@ export default function Filter({ onBackPress, onApply, isDarkTheme = true }: Fil
       <StatusBar barStyle={isDarkTheme ? 'light-content' : 'dark-content'} backgroundColor={dynamicStyles.backgroundColor} />
       <FadeInView style={{ flex: 1 }}>
 
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={onBackPress}
-          style={[styles.backButton, { backgroundColor: dynamicStyles.buttonBg, borderColor: dynamicStyles.buttonBorder }]}
-          activeOpacity={0.7}
-        >
-          <Text style={[styles.backArrow, { color: dynamicStyles.textColor }]}>←</Text>
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: dynamicStyles.textColor }]}>Filter</Text>
-        <View style={{ width: 44 }} />
-      </View>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={onBackPress}
+            style={[styles.backButton, { backgroundColor: dynamicStyles.buttonBg, borderColor: dynamicStyles.buttonBorder }]}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.backArrow, { color: dynamicStyles.textColor }]}>←</Text>
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: dynamicStyles.textColor }]}>Filter</Text>
+          <View style={{ width: 44 }} />
+        </View>
 
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        {/* Location Dropdown Selector */}
-        <Text style={[styles.sectionTitle, { color: dynamicStyles.textColor }]}>Location</Text>
-        <TouchableOpacity
-          style={[styles.dropdownSelector, { backgroundColor: dynamicStyles.cardBg, borderColor: dynamicStyles.cardBorder }]}
-          onPress={() => setShowLocationDropdown(!showLocationDropdown)}
-          activeOpacity={0.8}
-        >
-          <Text style={[styles.dropdownValue, { color: dynamicStyles.textColor }]}>{location}</Text>
-          <ChevronDown color={dynamicStyles.labelColor} />
-        </TouchableOpacity>
+        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+          {/* Location Dropdown Selector */}
+          <Text style={[styles.sectionTitle, { color: dynamicStyles.textColor }]}>Location</Text>
+          <TouchableOpacity
+            style={[styles.dropdownSelector, { backgroundColor: dynamicStyles.cardBg, borderColor: dynamicStyles.cardBorder }]}
+            onPress={() => setShowLocationDropdown(!showLocationDropdown)}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.dropdownValue, { color: dynamicStyles.textColor }]}>{location}</Text>
+            <ChevronDown color={dynamicStyles.labelColor} />
+          </TouchableOpacity>
 
-        {showLocationDropdown && (
-          <View style={[styles.dropdownMenu, { backgroundColor: dynamicStyles.cardBg, borderColor: dynamicStyles.cardBorder }]}>
-            {locations.map((loc) => (
+          {showLocationDropdown && (
+            <View style={[styles.dropdownMenu, { backgroundColor: dynamicStyles.cardBg, borderColor: dynamicStyles.cardBorder }]}>
+              {locations.map((loc) => (
+                <TouchableOpacity
+                  key={loc}
+                  style={[styles.dropdownItem, { borderBottomColor: dynamicStyles.dividerColor }]}
+                  onPress={() => {
+                    setLocation(loc);
+                    setShowLocationDropdown(false);
+                  }}
+                >
+                  <Text style={[styles.dropdownItemText, { color: dynamicStyles.textColor, fontWeight: location === loc ? 'bold' : 'normal' }]}>
+                    {loc}
+                  </Text>
+                  {location === loc && <Text style={{ color: '#2563EB', fontWeight: 'bold' }}>✓</Text>}
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+
+          {/* Salary Double-Thumb Range Slider Mockup */}
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 24, marginBottom: 8 }}>
+            <Text style={[styles.sectionTitle, { color: dynamicStyles.textColor, marginBottom: 0 }]}>Salary Range</Text>
+            <Text style={{ color: '#2563EB', fontWeight: 'bold', fontSize: 14 }}>
+              ${minSalary}k - ${maxSalary}k
+            </Text>
+          </View>
+          <View style={styles.sliderContainer}>
+            <View style={[styles.sliderTrack, { backgroundColor: dynamicStyles.sliderTrackBg }]}>
+              {/* Active filled range */}
+              <View
+                style={[
+                  styles.sliderActiveTrack,
+                  {
+                    left: `${getPercent(minSalary)}%`,
+                    width: `${getPercent(maxSalary) - getPercent(minSalary)}%`,
+                  },
+                ]}
+              />
+            </View>
+            {/* Slider Thumbs */}
+            <View style={[styles.sliderThumb, { left: `${getPercent(minSalary)}%` }]} />
+            <View style={[styles.sliderThumb, { left: `${getPercent(maxSalary)}%` }]} />
+
+            {/* Slider scale labels */}
+            <View style={styles.scaleLabelsRow}>
+              {salaryScale.map((val) => {
+                const isSelected = val === minSalary || val === maxSalary;
+                const inRange = val > minSalary && val < maxSalary;
+                return (
+                  <TouchableOpacity
+                    key={val}
+                    onPress={() => handleScaleTap(val)}
+                    style={{ padding: 4 }}
+                  >
+                    <Text
+                      style={[
+                        styles.scaleText,
+                        {
+                          color: isSelected
+                            ? '#2563EB'
+                            : inRange
+                              ? dynamicStyles.textColor
+                              : dynamicStyles.labelColor,
+                          fontWeight: isSelected ? 'bold' : 'normal',
+                        },
+                      ]}
+                    >
+                      ${val}k
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+
+          {/* Working Model pills */}
+          <Text style={[styles.sectionTitle, { color: dynamicStyles.textColor, marginTop: 24 }]}>Working Model</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pillsRow}>
+            {[
+              { id: 'all', label: 'All' },
+              { id: 'onsite', label: 'On-Site' },
+              { id: 'hybrid', label: 'Hybrid' },
+              { id: 'remote', label: 'Remote' },
+            ].map((item) => (
               <TouchableOpacity
-                key={loc}
-                style={[styles.dropdownItem, { borderBottomColor: dynamicStyles.dividerColor }]}
-                onPress={() => {
-                  setLocation(loc);
-                  setShowLocationDropdown(false);
-                }}
+                key={item.id}
+                style={[
+                  styles.pillButton,
+                  workingModel === item.id ? styles.activePill : { backgroundColor: dynamicStyles.cardBg, borderColor: dynamicStyles.cardBorder },
+                ]}
+                onPress={() => setWorkingModel(item.id as any)}
+                activeOpacity={0.8}
               >
-                <Text style={[styles.dropdownItemText, { color: dynamicStyles.textColor, fontWeight: location === loc ? 'bold' : 'normal' }]}>
-                  {loc}
+                <Text style={[styles.pillText, workingModel === item.id ? styles.activePillText : { color: dynamicStyles.labelColor }]}>
+                  {item.label}
                 </Text>
-                {location === loc && <Text style={{ color: '#2563EB', fontWeight: 'bold' }}>✓</Text>}
               </TouchableOpacity>
             ))}
-          </View>
-        )}
+          </ScrollView>
 
-        {/* Salary Double-Thumb Range Slider Mockup */}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 24, marginBottom: 8 }}>
-          <Text style={[styles.sectionTitle, { color: dynamicStyles.textColor, marginBottom: 0 }]}>Salary Range</Text>
-          <Text style={{ color: '#2563EB', fontWeight: 'bold', fontSize: 14 }}>
-            ${minSalary}k - ${maxSalary}k
-          </Text>
-        </View>
-        <View style={styles.sliderContainer}>
-          <View style={[styles.sliderTrack, { backgroundColor: dynamicStyles.sliderTrackBg }]}>
-            {/* Active filled range */}
-            <View
-              style={[
-                styles.sliderActiveTrack,
-                {
-                  left: `${getPercent(minSalary)}%`,
-                  width: `${getPercent(maxSalary) - getPercent(minSalary)}%`,
-                },
-              ]}
-            />
-          </View>
-          {/* Slider Thumbs */}
-          <View style={[styles.sliderThumb, { left: `${getPercent(minSalary)}%` }]} />
-          <View style={[styles.sliderThumb, { left: `${getPercent(maxSalary)}%` }]} />
+          {/* Job Type pills */}
+          <Text style={[styles.sectionTitle, { color: dynamicStyles.textColor, marginTop: 24 }]}>Job Type</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pillsRow}>
+            {[
+              { id: 'all', label: 'All' },
+              { id: 'fulltime', label: 'Full-Time' },
+              { id: 'parttime', label: 'Part-Time' },
+              { id: 'contract', label: 'Contract' },
+            ].map((item) => (
+              <TouchableOpacity
+                key={item.id}
+                style={[
+                  styles.pillButton,
+                  jobType === item.id ? styles.activePill : { backgroundColor: dynamicStyles.cardBg, borderColor: dynamicStyles.cardBorder },
+                ]}
+                onPress={() => setJobType(item.id as any)}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.pillText, jobType === item.id ? styles.activePillText : { color: dynamicStyles.labelColor }]}>
+                  {item.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
 
-          {/* Slider scale labels */}
-          <View style={styles.scaleLabelsRow}>
-            {salaryScale.map((val) => {
-              const isSelected = val === minSalary || val === maxSalary;
-              const inRange = val > minSalary && val < maxSalary;
+          {/* Experience Level pills */}
+          <Text style={[styles.sectionTitle, { color: dynamicStyles.textColor, marginTop: 24 }]}>Level of Experience</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pillsRow}>
+            {[
+              { id: 'all', label: 'All' },
+              { id: 'internship', label: 'Internship' },
+              { id: 'entry', label: 'Entry level' },
+              { id: 'associate', label: 'Associate' },
+            ].map((item) => {
+              const isActive = experienceLevels.includes(item.id);
               return (
                 <TouchableOpacity
-                  key={val}
-                  onPress={() => handleScaleTap(val)}
-                  style={{ padding: 4 }}
+                  key={item.id}
+                  style={[
+                    styles.pillButton,
+                    isActive ? styles.activePill : { backgroundColor: dynamicStyles.cardBg, borderColor: dynamicStyles.cardBorder },
+                  ]}
+                  onPress={() => toggleExperience(item.id)}
+                  activeOpacity={0.8}
                 >
-                  <Text
-                    style={[
-                      styles.scaleText,
-                      {
-                        color: isSelected
-                          ? '#2563EB'
-                          : inRange
-                          ? dynamicStyles.textColor
-                          : dynamicStyles.labelColor,
-                        fontWeight: isSelected ? 'bold' : 'normal',
-                      },
-                    ]}
-                  >
-                    ${val}k
+                  <Text style={[styles.pillText, isActive ? styles.activePillText : { color: dynamicStyles.labelColor }]}>
+                    {item.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+
+          {/* Job Title Checkboxes list */}
+          <Text style={[styles.sectionTitle, { color: dynamicStyles.textColor, marginTop: 24, marginBottom: 12 }]}>Job Title</Text>
+          <View style={styles.checkboxList}>
+            {[
+              { id: 'accountant', label: 'Accountant' },
+              { id: 'bdm', label: 'Business Development Manager' },
+              { id: 'writer', label: 'Content Writer' },
+            ].map((item) => {
+              const isChecked = jobTitles.includes(item.id);
+              return (
+                <TouchableOpacity
+                  key={item.id}
+                  style={styles.checkboxRow}
+                  onPress={() => toggleJobTitle(item.id)}
+                  activeOpacity={0.8}
+                >
+                  <CheckboxIcon checked={isChecked} />
+                  <Text style={[styles.checkboxLabel, { color: isChecked ? dynamicStyles.textColor : dynamicStyles.labelColor }]}>
+                    {item.label}
                   </Text>
                 </TouchableOpacity>
               );
             })}
           </View>
+        </ScrollView>
+
+        {/* Sticky Bottom buttons */}
+        <View style={[styles.bottomBar, { borderTopColor: dynamicStyles.dividerColor, backgroundColor: dynamicStyles.backgroundColor }]}>
+          <TouchableOpacity
+            style={[styles.actionButton, styles.resetButton, { backgroundColor: dynamicStyles.resetButtonBg }]}
+            onPress={handleReset}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.resetButtonText, { color: dynamicStyles.resetButtonText }]}>Reset Filter</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.actionButton, styles.applyButton]}
+            onPress={() => onApply && onApply({ location, minSalary, maxSalary, workingModel, jobType, experienceLevels, jobTitles })}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.applyButtonText}>Apply</Text>
+          </TouchableOpacity>
         </View>
-
-        {/* Working Model pills */}
-        <Text style={[styles.sectionTitle, { color: dynamicStyles.textColor, marginTop: 24 }]}>Working Model</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pillsRow}>
-          {[
-            { id: 'all', label: 'All' },
-            { id: 'onsite', label: 'On-Site' },
-            { id: 'hybrid', label: 'Hybrid' },
-            { id: 'remote', label: 'Remote' },
-          ].map((item) => (
-            <TouchableOpacity
-              key={item.id}
-              style={[
-                styles.pillButton,
-                workingModel === item.id ? styles.activePill : { backgroundColor: dynamicStyles.cardBg, borderColor: dynamicStyles.cardBorder },
-              ]}
-              onPress={() => setWorkingModel(item.id as any)}
-              activeOpacity={0.8}
-            >
-              <Text style={[styles.pillText, workingModel === item.id ? styles.activePillText : { color: dynamicStyles.labelColor }]}>
-                {item.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-
-        {/* Job Type pills */}
-        <Text style={[styles.sectionTitle, { color: dynamicStyles.textColor, marginTop: 24 }]}>Job Type</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pillsRow}>
-          {[
-            { id: 'all', label: 'All' },
-            { id: 'fulltime', label: 'Full-Time' },
-            { id: 'parttime', label: 'Part-Time' },
-            { id: 'contract', label: 'Contract' },
-          ].map((item) => (
-            <TouchableOpacity
-              key={item.id}
-              style={[
-                styles.pillButton,
-                jobType === item.id ? styles.activePill : { backgroundColor: dynamicStyles.cardBg, borderColor: dynamicStyles.cardBorder },
-              ]}
-              onPress={() => setJobType(item.id as any)}
-              activeOpacity={0.8}
-            >
-              <Text style={[styles.pillText, jobType === item.id ? styles.activePillText : { color: dynamicStyles.labelColor }]}>
-                {item.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-
-        {/* Experience Level pills */}
-        <Text style={[styles.sectionTitle, { color: dynamicStyles.textColor, marginTop: 24 }]}>Level of Experience</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pillsRow}>
-          {[
-            { id: 'all', label: 'All' },
-            { id: 'internship', label: 'Internship' },
-            { id: 'entry', label: 'Entry level' },
-            { id: 'associate', label: 'Associate' },
-          ].map((item) => {
-            const isActive = experienceLevels.includes(item.id);
-            return (
-              <TouchableOpacity
-                key={item.id}
-                style={[
-                  styles.pillButton,
-                  isActive ? styles.activePill : { backgroundColor: dynamicStyles.cardBg, borderColor: dynamicStyles.cardBorder },
-                ]}
-                onPress={() => toggleExperience(item.id)}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.pillText, isActive ? styles.activePillText : { color: dynamicStyles.labelColor }]}>
-                  {item.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-
-        {/* Job Title Checkboxes list */}
-        <Text style={[styles.sectionTitle, { color: dynamicStyles.textColor, marginTop: 24, marginBottom: 12 }]}>Job Title</Text>
-        <View style={styles.checkboxList}>
-          {[
-            { id: 'accountant', label: 'Accountant' },
-            { id: 'bdm', label: 'Business Development Manager' },
-            { id: 'writer', label: 'Content Writer' },
-          ].map((item) => {
-            const isChecked = jobTitles.includes(item.id);
-            return (
-              <TouchableOpacity
-                key={item.id}
-                style={styles.checkboxRow}
-                onPress={() => toggleJobTitle(item.id)}
-                activeOpacity={0.8}
-              >
-                <CheckboxIcon checked={isChecked} />
-                <Text style={[styles.checkboxLabel, { color: isChecked ? dynamicStyles.textColor : dynamicStyles.labelColor }]}>
-                  {item.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </ScrollView>
-
-      {/* Sticky Bottom buttons */}
-      <View style={[styles.bottomBar, { borderTopColor: dynamicStyles.dividerColor, backgroundColor: dynamicStyles.backgroundColor }]}>
-        <TouchableOpacity
-          style={[styles.actionButton, styles.resetButton, { backgroundColor: dynamicStyles.resetButtonBg }]}
-          onPress={handleReset}
-          activeOpacity={0.8}
-        >
-          <Text style={[styles.resetButtonText, { color: dynamicStyles.resetButtonText }]}>Reset Filter</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.actionButton, styles.applyButton]}
-          onPress={() => onApply && onApply({ location, minSalary, maxSalary, workingModel, jobType, experienceLevels, jobTitles })}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.applyButtonText}>Apply</Text>
-        </TouchableOpacity>
-      </View>
       </FadeInView>
     </SafeAreaView>
   );

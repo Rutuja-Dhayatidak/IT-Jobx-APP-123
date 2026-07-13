@@ -220,12 +220,12 @@ Apply now using the ITJobx App!`;
               <Text style={[styles.capsuleText, { color: dynamicStyles.textColor }]}>{jobInfo.experience || '2-4 Yrs Exp'}</Text>
             </View>
             <View style={[styles.capsuleBadge, { backgroundColor: dynamicStyles.badgeBg }]}>
-              {jobInfo.salary.includes('$') ? (
+              {jobInfo.salary && jobInfo.salary.includes('$') ? (
                 <DollarIcon color={dynamicStyles.labelColor} />
               ) : (
                 <RupeeIcon color={dynamicStyles.labelColor} />
               )}
-              <Text style={[styles.capsuleText, { color: dynamicStyles.textColor }]}>{jobInfo.salary}</Text>
+              <Text style={[styles.capsuleText, { color: dynamicStyles.textColor }]}>{jobInfo.salary || 'Not Disclosed'}</Text>
             </View>
           </View>
 

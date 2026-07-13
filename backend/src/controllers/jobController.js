@@ -3,10 +3,12 @@ const JobApplication = require('../models/JobApplication');
 const JobHistory = require('../models/JobHistory');
 const Company = require('../models/Company');
 const Candidate = require('../models/Candidate');
+const Profile = require('../models/Profile');
 const EmployerPlanUsage = require('../models/EmployerPlanUsage');
 const { autoModerationQueue, sendEmailQueue } = require('../queues');
 const { calculateSLA } = require('../utils/slaCalculator');
 const { emitNotification } = require('../utils/socketService');
+const jobRecommendationService = require('../services/jobRecommendationService');
 
 // Helper to resolve company ID for authenticated candidate/employer agent
 const resolveCompanyId = async (req) => {
@@ -45,7 +47,7 @@ exports.getPlanUsage = async (req, res) => {
 
     const company = await Company.findById(companyId).populate('plan_id');
     const usage = await EmployerPlanUsage.findOne({ companyId }) || { jobPostsUsed: 0 };
-    
+
     // Default mock limit rules if plan not associated
     const planName = company && company.plan_id ? company.plan_id.plan_name : 'Free Trial';
     const limit = company && company.plan_id && company.plan_id.limits ? company.plan_id.limits.job_posts : 5;
@@ -85,9 +87,9 @@ exports.getMyJobs = async (req, res) => {
 
     const applicationCounts = jobIds.length > 0
       ? await JobApplication.aggregate([
-          { $match: { jobId: { $in: jobIds } } },
-          { $group: { _id: '$jobId', count: { $sum: 1 } } }
-        ])
+        { $match: { jobId: { $in: jobIds } } },
+        { $group: { _id: '$jobId', count: { $sum: 1 } } }
+      ])
       : [];
 
     const countsByJobId = applicationCounts.reduce((acc, item) => {
@@ -381,7 +383,6 @@ exports.getPublishedJobs = async (req, res) => {
     if (search) {
       filter.$or = [
         { title: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } },
         { skills: { $regex: search, $options: 'i' } }
       ];
     }
@@ -406,7 +407,15 @@ exports.getPublishedJobs = async (req, res) => {
       .populate('companyId', 'name official_work_email logo website')
       .sort({ publishedAt: -1, isFeatured: -1 });
 
-    res.json({ success: true, jobs });
+    const JobApplication = require("../models/JobApplication");
+    const jobsWithCount = await Promise.all(jobs.map(async (job) => {
+      const count = await JobApplication.countDocuments({ jobId: job._id });
+      const jobObj = job.toObject();
+      jobObj.applyCount = count;
+      return jobObj;
+    }));
+
+    res.json({ success: true, jobs: jobsWithCount });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -554,7 +563,7 @@ exports.moderateJob = async (req, res) => {
       job.reviewedBy = req.user.id;
       job.reviewedAt = new Date();
       job.slaBreached = new Date() > new Date(job.slaDueAt);
-      
+
       await job.save();
 
       await JobHistory.create({
@@ -589,7 +598,7 @@ exports.moderateJob = async (req, res) => {
       job.rejectionNote = rejectionNote;
       job.reviewedBy = req.user.id;
       job.reviewedAt = new Date();
-      
+
       await job.save();
 
       // Decrement employer plan quota usage on rejection
@@ -745,5 +754,73 @@ exports.getAnalytics = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * Controller to fetch dynamic suggested jobs for authenticated candidate
+ */
+exports.getSuggestedJobs = async (req, res) => {
+  try {
+    const candidateId = req.user.id;
+    
+    // 1. Fetch user profile
+    const profile = await Profile.findOne({ userId: candidateId });
+
+    // 2. Fetch suggested jobs
+    const result = await jobRecommendationService.getSuggestedJobsForCandidate(candidateId, profile);
+
+    // If no match found
+    if (result.matchType === 'NO_MATCH') {
+      return res.json({
+        success: true,
+        matchType: 'NO_MATCH',
+        message: 'No matching jobs are available right now.',
+        jobs: []
+      });
+    }
+
+    let message = 'Jobs matching your preferences';
+    if (result.matchType === 'EXACT_MATCH') {
+      message = 'Jobs matching your experience and skills';
+    } else if (result.matchType === 'NEARBY_EXPERIENCE') {
+      message = 'Jobs requires slightly more or nearby experience';
+    } else if (result.matchType === 'SKILLS_MATCH') {
+      message = 'Jobs recommended based on your skills';
+    } else if (result.matchType === 'LATEST_JOBS') {
+      message = 'Latest opportunities available on ITJobX';
+    }
+
+    // Map response structure precisely to client expectation
+    const formattedJobs = result.jobs.map(job => ({
+      _id: job._id,
+      title: job.title,
+      companyName: job.companyId?.name || 'ABC Company',
+      company: job.companyId?.name || 'ABC Company', // Map to company field as well
+      logo: job.companyId?.logo || '',
+      location: job.location || 'Remote',
+      jobType: job.jobType || 'Full-time',
+      locationType: job.locationType || 'remote',
+      experienceLevel: job.experienceLevel || 'Entry Level',
+      minimumExperienceMonths: job.minimumExperienceMonths || 0,
+      maximumExperienceMonths: job.maximumExperienceMonths || 0,
+      matchedSkills: job.matchedSkills || [],
+      recommendationScore: job.recommendationScore || 0,
+      recommendationLabel: job.recommendationLabel || 'Latest opportunities',
+      salary: job.salaryBudget || 'Not Disclosed',
+      salaryBudget: job.salaryBudget || 'Not Disclosed',
+      skills: job.skills || [],
+      description: job.description || ''
+    }));
+
+    return res.json({
+      success: true,
+      matchType: result.matchType,
+      message,
+      jobs: formattedJobs
+    });
+  } catch (error) {
+    console.error('Error fetching suggested jobs:', error);
+    res.status(500).json({ success: false, message: 'Internal Server Error' });
   }
 };

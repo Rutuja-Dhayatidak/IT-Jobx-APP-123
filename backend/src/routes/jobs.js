@@ -7,6 +7,7 @@ const jobController = require('../controllers/jobController');
 // --- Candidate & Public Routes (no authentication required) ---
 router.get('/published', jobController.getPublishedJobs);
 router.get('/published/:id', jobController.getPublishedJobDetail);
+router.get('/suggested', verifyToken, jobController.getSuggestedJobs);
 router.post('/:id/view', jobController.incrementViewCount);
 
 // --- Employer-only Routes (require verifyToken & employer role validation) ---
