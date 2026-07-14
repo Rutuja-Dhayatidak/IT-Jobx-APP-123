@@ -283,7 +283,7 @@ function App() {
                 console.error('Error saving session:', err);
               }
               setAuthToken(token);
-              navigateTo('profile');
+              navigateTo('location');
             } else {
               navigateTo('reset_password');
             }
