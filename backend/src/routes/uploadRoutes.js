@@ -1,24 +1,31 @@
 const express = require("express");
 const router = express.Router();
-const { upload, memoryUpload } = require("../middleware/upload");
 const uploadController = require("../controllers/uploadController");
 const verifyToken = require("../middleware/verifyToken");
 
-// Basic file upload (Already implemented)
-router.post("/file", verifyToken, memoryUpload.single("file"), uploadController.uploadFile);
+const { secureMulter } = require("../config/upload.config");
+const validateUploadedFile = require("../middlewares/validateUploadedFile");
+const { UploadCategories } = require("../constants/upload.constants");
+const { resumeUploadRateLimiter, profileImageUploadRateLimiter } = require("../middlewares/fileUploadRateLimiter");
 
-// Resume upload and parse
+// Safe Profile image upload (Public asset)
+router.post(
+  "/file",
+  verifyToken,
+  profileImageUploadRateLimiter,
+  secureMulter.single("file"),
+  validateUploadedFile(UploadCategories.PROFILE_IMAGE),
+  
+  uploadController.uploadFile
+);
+
+// Safe Resume upload and parse (Private/Authenticated asset)
 router.post(
   "/resume",
   verifyToken,
-  (req, res, next) => {
-    memoryUpload.single("file")(req, res, (err) => {
-      if (err) {
-        return res.status(400).json({ success: false, message: err.message });
-      }
-      next();
-    });
-  },
+  resumeUploadRateLimiter,
+  secureMulter.single("file"),
+  validateUploadedFile(UploadCategories.RESUME),
   uploadController.uploadResume
 );
 

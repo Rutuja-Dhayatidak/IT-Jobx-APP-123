@@ -1,51 +1,72 @@
-const cloudinary = require("../config/cloudinary");
-const { parseResume } = require("../utils/resumeParser");
+const { uploadBufferToCloudinary, deleteFromCloudinary, generateSignedUrl } = require("../services/fileStorage.service");
+const { calculateBufferChecksum } = require("../services/fileDelete.service");
+const FileMetadata = require("../models/FileMetadata");
 const Profile = require("../models/Profile");
-const streamifier = require("streamifier");
+const { parseResume } = require("../utils/resumeParser");
+const { UploadErrorCodes } = require("../constants/upload.constants");
 
-// Upload Resume and Parse
+// Upload Resume (Authenticated/Private upload)
 exports.uploadResume = async (req, res) => {
+  let newCloudinaryRes = null;
   try {
     if (!req.file) {
-      return res.status(400).json({ message: "No file uploaded" });
+      return res.status(400).json({
+        success: false,
+        error: { code: UploadErrorCodes.FILE_REQUIRED, message: "No file uploaded" }
+      });
     }
 
-    // 1. Upload to Cloudinary. Use auto detection so PDFs can open inline in the browser.
-    const uploadToCloudinary = (file) => {
-      return new Promise((resolve, reject) => {
-        const stream = cloudinary.uploader.upload_stream(
-          {
-            resource_type: "auto",
-            folder: "resumes",
-            use_filename: true,
-            unique_filename: true,
-            filename_override: file.originalname
-          },
-          (error, result) => {
-            if (result) resolve(result);
-            else reject(error);
-          }
-        );
-        streamifier.createReadStream(file.buffer).pipe(stream);
+    const userId = req.user.id;
+    const checksum = calculateBufferChecksum(req.file.buffer);
+
+    // 1. Check for duplicate upload (same user, same file content)
+    const existingMetadata = await FileMetadata.findOne({ ownerId: userId, checksum, category: "resume" });
+    if (existingMetadata) {
+      // Generate short-lived signed URL for existing resume
+      const signedUrl = generateSignedUrl(existingMetadata.publicId);
+      
+      return res.json({
+        success: true,
+        resumeUrl: signedUrl,
+        message: "Duplicate file detected. Existing resume returned."
       });
-    };
+    }
 
-    const cloudinaryRes = await uploadToCloudinary(req.file);
-    const resumeUrl = cloudinaryRes.secure_url;
+    // 2. Upload to Cloudinary under folder "resumes" as authenticated (private) resource
+    try {
+      newCloudinaryRes = await uploadBufferToCloudinary(req.file.buffer, {
+        folder: "resumes",
+        public_id: req.file.filename.split(".")[0], // Strip extension for public_id
+        resource_type: "raw", // Keep raw for PDF/DOCX
+        type: "authenticated" // Private/Authenticated access only
+      });
+    } catch (uploadErr) {
+      return res.status(500).json({
+        success: false,
+        error: {
+          code: UploadErrorCodes.FILE_UPLOAD_FAILED,
+          message: "Failed to upload resume to storage provider."
+        }
+      });
+    }
 
-    // 2. Parse Resume Data
+    // 3. Parse resume contents
     const parsedData = await parseResume(req.file.buffer, req.file.originalname) || {
       headline: "",
       location: "",
       skills: []
     };
 
-    // 3. Update Profile (Merge logic)
-    const userId = req.user.id;
+    // 4. Update Profile & replace old files
     let profile = await Profile.findOne({ userId });
+    const oldPublicId = profile ? profile.resumePublicId : null;
+
+    const secureUrl = newCloudinaryRes.secure_url;
+    const publicId = newCloudinaryRes.public_id;
 
     const newProfileData = {
-      resumeUrl,
+      resumeUrl: secureUrl,
+      resumePublicId: publicId,
       userType: parsedData.userType || "fresher",
       fullName: parsedData.fullName || "",
       headline: parsedData.headline || "",
@@ -60,8 +81,9 @@ exports.uploadResume = async (req, res) => {
     };
 
     if (profile) {
-      // Intelligent Merge: Only update if field is empty or array is empty
-      if (!profile.resumeUrl) profile.resumeUrl = resumeUrl;
+      // Merge values
+      if (!profile.resumeUrl) profile.resumeUrl = secureUrl;
+      profile.resumePublicId = publicId;
       if (!profile.headline) profile.headline = newProfileData.headline;
       if (!profile.location) profile.location = newProfileData.location;
       if (!profile.about) profile.about = newProfileData.about;
@@ -77,42 +99,146 @@ exports.uploadResume = async (req, res) => {
       profile = await Profile.create({ userId, ...newProfileData });
     }
 
+    // 5. Update/Save FileMetadata record
+    await FileMetadata.findOneAndUpdate(
+      { ownerId: userId, category: "resume" },
+      {
+        ownerType: "Candidate",
+        storageProvider: "cloudinary",
+        publicId,
+        secureUrl,
+        originalName: req.file.originalname,
+        storedName: req.file.filename,
+        mimeType: req.file.mimetype,
+        extension: req.file.filename.split(".").pop(),
+        size: req.file.size,
+        checksum,
+        scanStatus: "CLEAN"
+      },
+      { upsert: true }
+    );
+
+    // 6. Delete old Cloudinary file now that new metadata is safely committed
+    if (oldPublicId && oldPublicId !== publicId) {
+      deleteFromCloudinary(oldPublicId, "raw").catch(() => {});
+    }
+
+    // Generate response signed URL
+    const signedUrl = generateSignedUrl(publicId);
+
     res.json({
       success: true,
-      resumeUrl,
-      ...newProfileData // Spread all parsed data for frontend auto-fill
+      resumeUrl: signedUrl,
+      ...newProfileData
     });
 
   } catch (error) {
-    console.error("UPLOAD CONTROLLER ERROR:", error);
-    res.status(500).json({ 
-      success: false, 
-      message: error.message || "Internal Server Error during upload" 
+    // Transaction failure rollback: delete uploaded file if DB update crashed
+    if (newCloudinaryRes && newCloudinaryRes.public_id) {
+      deleteFromCloudinary(newCloudinaryRes.public_id, "raw").catch(() => {});
+    }
+
+    res.status(500).json({
+      success: false,
+      error: {
+        code: UploadErrorCodes.FILE_UPLOAD_FAILED,
+        message: "Failed to process and save resume."
+      }
     });
   }
 };
 
-// Simple file upload (already used for images)
+// Simple profile image upload (Public upload)
 exports.uploadFile = async (req, res) => {
+  let newCloudinaryRes = null;
   try {
-    if (!req.file) return res.status(400).json({ message: "No file" });
-
-    const uploadToCloudinary = (buffer) => {
-      return new Promise((resolve, reject) => {
-        const stream = cloudinary.uploader.upload_stream(
-          { folder: "uploads" },
-          (error, result) => {
-            if (result) resolve(result);
-            else reject(error);
-          }
-        );
-        streamifier.createReadStream(buffer).pipe(stream);
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        error: { code: UploadErrorCodes.FILE_REQUIRED, message: "No file uploaded" }
       });
-    };
+    }
 
-    const result = await uploadToCloudinary(req.file.buffer);
-    res.json({ url: result.secure_url });
+    const userId = req.user.id;
+    const checksum = calculateBufferChecksum(req.file.buffer);
+
+    // 1. Upload to Cloudinary under folder "profile_images"
+    try {
+      newCloudinaryRes = await uploadBufferToCloudinary(req.file.buffer, {
+        folder: "profile_images",
+        public_id: req.file.filename.split(".")[0],
+        resource_type: "image",
+        type: "upload" // Publicly accessible image
+      });
+    } catch (uploadErr) {
+      return res.status(500).json({
+        success: false,
+        error: {
+          code: UploadErrorCodes.FILE_UPLOAD_FAILED,
+          message: "Failed to upload image to storage provider."
+        }
+      });
+    }
+
+    const secureUrl = newCloudinaryRes.secure_url;
+    const publicId = newCloudinaryRes.public_id;
+
+    // 2. Update Profile reference
+    let profile = await Profile.findOne({ userId });
+    const oldPublicId = profile ? profile.profileImagePublicId : null;
+
+    if (profile) {
+      profile.profileImage = secureUrl;
+      profile.profileImagePublicId = publicId;
+      await profile.save();
+    } else {
+      profile = await Profile.create({
+        userId,
+        profileImage: secureUrl,
+        profileImagePublicId: publicId
+      });
+    }
+
+    // 3. Save metadata record
+    await FileMetadata.findOneAndUpdate(
+      { ownerId: userId, category: "profile-image" },
+      {
+        ownerType: "Candidate",
+        storageProvider: "cloudinary",
+        publicId,
+        secureUrl,
+        originalName: req.file.originalname,
+        storedName: req.file.filename,
+        mimeType: req.file.mimetype,
+        extension: req.file.filename.split(".").pop(),
+        size: req.file.size,
+        checksum,
+        scanStatus: "CLEAN"
+      },
+      { upsert: true }
+    );
+
+    // 4. Delete old image
+    if (oldPublicId && oldPublicId !== publicId) {
+      deleteFromCloudinary(oldPublicId, "image").catch(() => {});
+    }
+
+    res.json({
+      success: true,
+      url: secureUrl
+    });
+
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    if (newCloudinaryRes && newCloudinaryRes.public_id) {
+      deleteFromCloudinary(newCloudinaryRes.public_id, "image").catch(() => {});
+    }
+
+    res.status(500).json({
+      success: false,
+      error: {
+        code: UploadErrorCodes.FILE_UPLOAD_FAILED,
+        message: "Failed to process and save profile image."
+      }
+    });
   }
 };

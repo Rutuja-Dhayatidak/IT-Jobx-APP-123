@@ -45,6 +45,14 @@ const profileSchema = new mongoose.Schema(
       type: String,
       default: ""
     },
+    resumePublicId: {
+      type: String,
+      default: ""
+    },
+    profileImagePublicId: {
+      type: String,
+      default: ""
+    },
     // Detailed Experience for Experienced Professionals
     experience: [
       {

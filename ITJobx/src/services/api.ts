@@ -62,7 +62,9 @@ export async function apiRequest(endpoint: string, options: RequestInit = {}) {
       const errMsg = data.errors && Array.isArray(data.errors)
         ? data.errors.map((e: any) => e.message).join("\n")
         : (data.message || `Request failed with status ${response.status}`);
-      throw new Error(errMsg);
+      const err = new Error(errMsg) as any;
+      err.errors = data.errors;
+      throw err;
     }
 
     return data;

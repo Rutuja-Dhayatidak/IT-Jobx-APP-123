@@ -1,6 +1,8 @@
 node_modules/
 .env
 .env.*
+!.env.example
+
 android/.gradle/
 android/app/build/
 android/build/
@@ -8,3 +10,14 @@ ios/Pods/
 dist/
 build/
 *.log
+
+*.pem
+*.key
+*.p12
+*.pfx
+
+service-account*.json
+firebase-adminsdk*.json
+
+secrets/
+credentials/

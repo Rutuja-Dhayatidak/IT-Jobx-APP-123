@@ -3,6 +3,7 @@
     "C:\\ITApp\\ITJobx\\node_modules\\@react-native-async-storage\\async-storage\\android\\build\\generated\\source\\codegen\\jni\\CMakeLists.txt",
     "C:\\ITApp\\ITJobx\\node_modules\\@react-native-documents\\picker\\android\\build\\generated\\source\\codegen\\jni\\CMakeLists.txt",
     "C:\\ITApp\\ITJobx\\node_modules\\lottie-react-native\\android\\build\\generated\\source\\codegen\\jni\\CMakeLists.txt",
+    "C:\\ITApp\\ITJobx\\node_modules\\react-native-keychain\\android\\build\\generated\\source\\codegen\\jni\\CMakeLists.txt",
     "C:\\ITApp\\ITJobx\\node_modules\\react-native-safe-area-context\\android\\src\\main\\jni\\CMakeLists.txt",
     "C:\\ITApp\\ITJobx\\node_modules\\react-native-svg\\android\\src\\main\\jni\\CMakeLists.txt",
     "C:\\ITApp\\ITJobx\\node_modules\\react-native-webview\\android\\build\\generated\\source\\codegen\\jni\\CMakeLists.txt",
@@ -57,6 +58,11 @@
     },
     "react_codegen_lottiereactnative::@0fa4dc904d7e359a99fb": {
       "artifactName": "react_codegen_lottiereactnative",
+      "abi": "armeabi-v7a",
+      "runtimeFiles": []
+    },
+    "react_codegen_RNKeychainSpec::@f9a2cb36ebca2de4baf9": {
+      "artifactName": "react_codegen_RNKeychainSpec",
       "abi": "armeabi-v7a",
       "runtimeFiles": []
     },

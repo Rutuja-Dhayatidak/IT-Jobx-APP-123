@@ -1,4 +1,5 @@
-require("dotenv").config();
+// Initialize environment validation at the absolute top of the server startup lifecycle
+const env = require("./src/config/env.config");
 const http = require("http");
 const { Server } = require("socket.io");
 const app = require("./src/app");
@@ -7,8 +8,9 @@ const createSuperAdmin = require("./src/config/createSuperAdmin");
 const allowedOrigins = require("./src/config/allowedOrigins");
 const { initSocket } = require("./src/utils/socketService");
 const { startSubscriptionCron } = require("./src/cron/subscriptionCron");
+const logger = require("./src/utils/logger");
 
-const PORT = process.env.PORT || 5000;
+const PORT = env.PORT;
 
 // Create standard HTTP server wrapping Express app
 const server = http.createServer(app);
@@ -30,7 +32,7 @@ const startServer = async () => {
     await connectDB();
 
     server.listen(PORT, async () => {
-      console.log(`Server running on port ${PORT} 🚀 (with WebSockets active)`);
+      logger.info(`Server running on port ${PORT} 🚀 (with WebSockets active)`);
 
       await createSuperAdmin();
       startSubscriptionCron(); // Start background billing automated sweeps
@@ -38,8 +40,10 @@ const startServer = async () => {
     });
 
   } catch (error) {
-    console.error("❌ Server failed to start:", error);
+    logger.error("❌ Server failed to start:", error);
   }
 };
 
 startServer();
+// Trigger restart for environment changes
+

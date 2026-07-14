@@ -21,6 +21,7 @@ import FadeInView from '../components/FadeInView';
 import SuggestedJobsSection from '../components/home/SuggestedJobsSection';
 import { getSuggestedJobs, SuggestedJob } from '../services/suggestedJobsApi';
 import { viewProfileService } from '../services/viewProfile';
+import { apiRequest } from '../services/api';
 
 const { width } = Dimensions.get('window');
 
@@ -154,6 +155,7 @@ export default function Home({
 
   const [candidateName, setCandidateName] = useState('Rutuja');
   const [profileImage, setProfileImage] = useState('');
+  const [recentJobsList, setRecentJobsList] = useState<any[]>([]);
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -170,6 +172,17 @@ export default function Home({
     try {
       setLoadingSuggested(true);
       setSuggestedError(null);
+      const token = await AsyncStorage.getItem('authToken');
+      if (!token) {
+        // Fallback to public published jobs for guest users
+        const res = await apiRequest('/jobs/published', { method: 'GET' });
+        if (res && res.success) {
+          setSuggestedList(res.jobs || []);
+        } else {
+          setSuggestedError(res.message || 'Failed to load jobs');
+        }
+        return;
+      }
       const res = await getSuggestedJobs();
       if (res && res.success) {
         setSuggestedList(res.jobs || []);
@@ -183,11 +196,29 @@ export default function Home({
     }
   };
 
+  const fetchRecentJobs = async () => {
+    try {
+      const data = await apiRequest('/jobs/published', { method: 'GET' });
+      if (data && data.success) {
+        setRecentJobsList((data.jobs || []).slice(0, 3)); // Only take 3 jobs!
+      }
+    } catch (err) {
+      console.error('Error fetching recent jobs in Home:', err);
+    }
+  };
+
   useEffect(() => {
     fetchSuggested();
+    fetchRecentJobs();
 
     const loadUser = async () => {
       try {
+        const token = await AsyncStorage.getItem('authToken');
+        if (!token) {
+          setCandidateName('Guest User');
+          return;
+        }
+
         const savedUser = await AsyncStorage.getItem('user');
         if (savedUser) {
           const parsed = JSON.parse(savedUser);
@@ -221,8 +252,11 @@ export default function Home({
             setProfileImage(profileRes.profile.profileImage);
           }
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error loading user in Home:', err);
+        await AsyncStorage.removeItem('authToken');
+        await AsyncStorage.removeItem('token');
+        setCandidateName('Guest User');
       }
     };
     loadUser();
@@ -731,46 +765,68 @@ export default function Home({
 
             {/* Recent Jobs List */}
             <View style={styles.recentJobsContainer}>
-              {recentJobs.map((job) => (
-                <TouchableOpacity
-                  key={job.id}
-                  style={[styles.recentJobCard, { backgroundColor: dynamicStyles.cardBg, borderColor: dynamicStyles.cardBorder }]}
-                  onPress={() => onJobPress && onJobPress(job)}
-                  activeOpacity={0.9}
-                >
-                  <View style={styles.recentJobHeader}>
-                    <View style={[styles.recentCompanyLogo, { backgroundColor: job.logoBg }]}>
-                      <Text style={styles.recentCompanyLogoText}>{job.logo}</Text>
-                    </View>
-                    <View style={styles.recentJobInfo}>
-                      <Text style={[styles.recentJobTitle, { color: dynamicStyles.textColor }]}>{job.title}</Text>
-                      <Text style={styles.recentCompanyName}>{job.company}</Text>
-                    </View>
-                    <TouchableOpacity style={styles.bookmarkButton} activeOpacity={0.7}>
-                      <Svg width={18} height={18} viewBox="0 0 24 24" fill="#2563EB">
-                        <Path d="M17 3H7c-1.1 0-1.99.9-1.99 2L5 21l7-3 7 3V5c0-1.1-.9-2-2-2z" />
-                      </Svg>
-                    </TouchableOpacity>
-                  </View>
+              {recentJobsList.map((job) => {
+                const companyName = job.companyId?.name || 'Company';
+                const companyInitial = companyName.charAt(0).toUpperCase();
+                const code = companyName.charCodeAt(0) || 65;
+                const colors = ['#8B5CF6', '#3B82F6', '#10B981', '#F59E0B', '#EC4899', '#EF4444'];
+                const logoBg = colors[code % colors.length];
 
-                  <View style={styles.recentTagsContainer}>
-                    <View style={[styles.recentTagBadge, { backgroundColor: dynamicStyles.tagBg }]}>
-                      <Text style={[styles.recentTagText, { color: dynamicStyles.tagTextColor }]}>{job.type}</Text>
-                    </View>
-                    <View style={[styles.recentTagBadge, { backgroundColor: dynamicStyles.tagBg }]}>
-                      <Text style={[styles.recentTagText, { color: dynamicStyles.tagTextColor }]}>{job.workplace}</Text>
-                    </View>
-                    <View style={[styles.recentTagBadge, { backgroundColor: dynamicStyles.tagBg }]}>
-                      <Text style={[styles.recentTagText, { color: dynamicStyles.tagTextColor }]}>{job.experience}</Text>
-                    </View>
-                  </View>
+                const salaryText = job.salaryBudget
+                  ? `₹${job.salaryBudget}`
+                  : job.salary
+                    ? job.salary
+                    : 'Competitive';
 
-                  <View style={styles.recentJobFooter}>
-                    <Text style={styles.recentLocation}>📍 {job.location}</Text>
-                    <Text style={styles.recentSalary}>{job.salary}</Text>
-                  </View>
-                </TouchableOpacity>
-              ))}
+                const isSaved = savedJobs.some((j: any) => (j._id || j.id) === (job._id || job.id));
+
+                return (
+                  <TouchableOpacity
+                    key={job._id || job.id}
+                    style={[styles.recentJobCard, { backgroundColor: dynamicStyles.cardBg, borderColor: dynamicStyles.cardBorder }]}
+                    onPress={() => onJobPress && onJobPress(job)}
+                    activeOpacity={0.9}
+                  >
+                    <View style={styles.recentJobHeader}>
+                      <View style={[styles.recentCompanyLogo, { backgroundColor: logoBg }]}>
+                        <Text style={styles.recentCompanyLogoText}>{companyInitial}</Text>
+                      </View>
+                      <View style={styles.recentJobInfo}>
+                        <Text style={[styles.recentJobTitle, { color: dynamicStyles.textColor }]} numberOfLines={1}>{job.title}</Text>
+                        <Text style={styles.recentCompanyName} numberOfLines={1}>{companyName}</Text>
+                      </View>
+                      <TouchableOpacity
+                        style={styles.bookmarkButton}
+                        activeOpacity={0.7}
+                        onPress={() => onToggleSave && onToggleSave(job)}
+                      >
+                        <Svg width={18} height={18} viewBox="0 0 24 24" fill={isSaved ? '#2563EB' : 'none'} stroke={isSaved ? '#2563EB' : dynamicStyles.pillText} strokeWidth={2}>
+                          <Path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z" />
+                        </Svg>
+                      </TouchableOpacity>
+                    </View>
+
+                    <View style={styles.recentTagsContainer}>
+                      <View style={[styles.recentTagBadge, { backgroundColor: dynamicStyles.tagBg }]}>
+                        <Text style={[styles.recentTagText, { color: dynamicStyles.tagTextColor }]}>{job.jobType || 'Full-Time'}</Text>
+                      </View>
+                      <View style={[styles.recentTagBadge, { backgroundColor: dynamicStyles.tagBg }]}>
+                        <Text style={[styles.recentTagText, { color: dynamicStyles.tagTextColor }]}>{job.locationType || 'Remote'}</Text>
+                      </View>
+                      <View style={[styles.recentTagBadge, { backgroundColor: dynamicStyles.tagBg }]}>
+                        <Text style={[styles.recentTagText, { color: dynamicStyles.tagTextColor }]}>
+                          {job.minimumExperienceMonths === 0 ? 'Fresher' : `${Math.round(job.minimumExperienceMonths / 12)} Yrs+`}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.recentJobFooter}>
+                      <Text style={styles.recentLocation}>📍 {job.location || 'Pune'}</Text>
+                      <Text style={styles.recentSalary}>{salaryText}</Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           </Animated.View>
 

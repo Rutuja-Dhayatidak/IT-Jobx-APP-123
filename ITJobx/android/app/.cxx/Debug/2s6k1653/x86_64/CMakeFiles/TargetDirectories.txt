@@ -10,6 +10,9 @@ C:/ITApp/ITJobx/android/app/.cxx/Debug/2s6k1653/x86_64/rndocumentpickerCGen_auto
 C:/ITApp/ITJobx/android/app/.cxx/Debug/2s6k1653/x86_64/lottiereactnative_autolinked_build/CMakeFiles/react_codegen_lottiereactnative.dir
 C:/ITApp/ITJobx/android/app/.cxx/Debug/2s6k1653/x86_64/lottiereactnative_autolinked_build/CMakeFiles/edit_cache.dir
 C:/ITApp/ITJobx/android/app/.cxx/Debug/2s6k1653/x86_64/lottiereactnative_autolinked_build/CMakeFiles/rebuild_cache.dir
+C:/ITApp/ITJobx/android/app/.cxx/Debug/2s6k1653/x86_64/RNKeychainSpec_autolinked_build/CMakeFiles/react_codegen_RNKeychainSpec.dir
+C:/ITApp/ITJobx/android/app/.cxx/Debug/2s6k1653/x86_64/RNKeychainSpec_autolinked_build/CMakeFiles/edit_cache.dir
+C:/ITApp/ITJobx/android/app/.cxx/Debug/2s6k1653/x86_64/RNKeychainSpec_autolinked_build/CMakeFiles/rebuild_cache.dir
 C:/ITApp/ITJobx/android/app/.cxx/Debug/2s6k1653/x86_64/safeareacontext_autolinked_build/CMakeFiles/react_codegen_safeareacontext.dir
 C:/ITApp/ITJobx/android/app/.cxx/Debug/2s6k1653/x86_64/safeareacontext_autolinked_build/CMakeFiles/edit_cache.dir
 C:/ITApp/ITJobx/android/app/.cxx/Debug/2s6k1653/x86_64/safeareacontext_autolinked_build/CMakeFiles/rebuild_cache.dir

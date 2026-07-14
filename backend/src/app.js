@@ -3,9 +3,16 @@ const cors = require("cors");
 const allowedOrigins = require("./config/allowedOrigins");
 
 const app = express();
+app.set("trust proxy", 1);
+
+const { sanitizationMiddleware } = require("./utils/sanitizeInput");
+const globalRateLimiter = require("./middlewares/globalRateLimiter");
 
 // Middleware
-app.use(express.json());
+app.use(express.json({ limit: "100kb" }));
+app.use(express.urlencoded({ extended: true, limit: "100kb" }));
+app.use(sanitizationMiddleware);
+app.use("/api", globalRateLimiter);
 
 app.use(cors({
   origin: function (origin, callback) {

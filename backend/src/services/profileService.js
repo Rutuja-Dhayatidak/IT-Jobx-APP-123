@@ -20,6 +20,8 @@ const calculateCompletion = (profile) => {
   return Math.round((filledCount / totalPossible) * 100);
 };
 
+const { generateSignedUrl } = require("./fileStorage.service");
+
 const getProfileByUserId = async (userId) => {
   const profile = await Profile.findOne({ userId })
     .populate({
@@ -39,6 +41,11 @@ const getProfileByUserId = async (userId) => {
       profile: { userId: candidate, userType: "fresher", skills: [], education: [], experience: [], projects: [] },
       completionPercentage: 0
     };
+  }
+
+  // Generate temporary signed URL if resumePublicId exists
+  if (profile.resumePublicId) {
+    profile.resumeUrl = generateSignedUrl(profile.resumePublicId);
   }
 
   return {

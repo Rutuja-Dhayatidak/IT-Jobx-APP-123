@@ -39,9 +39,9 @@ const ChevronIcon = ({ color }: { color: string }) => (
 export default function Experience({ onBackPress, isDarkTheme = true }: ExperienceProps) {
   const [jobTitle, setJobTitle] = useState('');
   const [company, setCompany] = useState('');
-  const [fromMonth, setFromMonth] = useState('Select');
-  const [toMonth, setToMonth] = useState('Select');
-  const [currentlyWorking, setCurrentlyWorking] = useState(true);
+  const [fromMonth, setFromMonth] = useState('');
+  const [toMonth, setToMonth] = useState('');
+  const [currentlyWorking, setCurrentlyWorking] = useState(false);
   const [industry, setIndustry] = useState('IT and Software');
   const [description, setDescription] = useState('');
   const [jobType, setJobType] = useState('Full-Time');
@@ -196,46 +196,33 @@ export default function Experience({ onBackPress, isDarkTheme = true }: Experien
                 />
               </View>
 
-              {/* Date Picker Row */}
+              {/* Date Input Row */}
               <View style={styles.row}>
                 <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
                   <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>From</Text>
-                  <TouchableOpacity
-                    style={[styles.dropdownButton, { backgroundColor: dynamicStyles.inputBg, borderColor: dynamicStyles.inputBorder }]}
-                    onPress={() => setShowFromDropdown(!showFromDropdown)}
-                  >
-                    <Text style={{ color: dynamicStyles.textColor }}>{fromMonth}</Text>
-                    <ChevronIcon color={isDarkTheme ? '#64748B' : '#94A3B8'} />
-                  </TouchableOpacity>
-                  {showFromDropdown && (
-                    <View style={[styles.dropdownMenu, { backgroundColor: dynamicStyles.dropdownBg, borderColor: dynamicStyles.inputBorder }]}>
-                      {months.map((m) => (
-                        <TouchableOpacity key={m} style={styles.dropdownItem} onPress={() => { setFromMonth(m); setShowFromDropdown(false); }}>
-                          <Text style={{ color: dynamicStyles.textColor }}>{m}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  )}
+                  <TextInput
+                    style={[styles.input, { backgroundColor: dynamicStyles.inputBg, color: dynamicStyles.textColor, borderColor: dynamicStyles.inputBorder }]}
+                    value={fromMonth === 'Select' ? '' : fromMonth}
+                    onChangeText={setFromMonth}
+                    placeholder="e.g. Dec 2020"
+                    placeholderTextColor={isDarkTheme ? '#64748B' : '#94A3B8'}
+                  />
                 </View>
-
+ 
                 <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
                   <Text style={[styles.label, { color: dynamicStyles.labelColor }]}>To</Text>
-                  <TouchableOpacity
-                    style={[styles.dropdownButton, { backgroundColor: dynamicStyles.inputBg, borderColor: dynamicStyles.inputBorder }]}
-                    onPress={() => setShowToDropdown(!showToDropdown)}
-                  >
-                    <Text style={{ color: dynamicStyles.textColor }}>{toMonth}</Text>
-                    <ChevronIcon color={isDarkTheme ? '#64748B' : '#94A3B8'} />
-                  </TouchableOpacity>
-                  {showToDropdown && (
-                    <View style={[styles.dropdownMenu, { backgroundColor: dynamicStyles.dropdownBg, borderColor: dynamicStyles.inputBorder }]}>
-                      {months.map((m) => (
-                        <TouchableOpacity key={m} style={styles.dropdownItem} onPress={() => { setToMonth(m); setShowToDropdown(false); }}>
-                          <Text style={{ color: dynamicStyles.textColor }}>{m}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  )}
+                  <TextInput
+                    style={[
+                      styles.input, 
+                      { backgroundColor: dynamicStyles.inputBg, color: dynamicStyles.textColor, borderColor: dynamicStyles.inputBorder },
+                      currentlyWorking && { opacity: 0.5 }
+                    ]}
+                    value={currentlyWorking ? 'Present' : (toMonth === 'Select' ? '' : toMonth)}
+                    onChangeText={setToMonth}
+                    placeholder="e.g. Mar 2021"
+                    placeholderTextColor={isDarkTheme ? '#64748B' : '#94A3B8'}
+                    editable={!currentlyWorking}
+                  />
                 </View>
               </View>
 

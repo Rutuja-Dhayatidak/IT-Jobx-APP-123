@@ -202,11 +202,11 @@ export default function SuggestedJobCard({
 
       {/* Match Quality Banner */}
       <View style={styles.matchBanner}>
-        <CircularProgress score={job.recommendationScore} size={36} />
+        <CircularProgress score={job.recommendationScore || 0} size={36} />
         <View style={styles.matchDetailsCol}>
           <View style={styles.matchBadgeRow}>
             <Text style={[styles.matchStatusText, { color: dynamicStyles.textColor }]}>
-              {job.recommendationScore >= 80 ? 'Excellent Match' : job.recommendationScore >= 50 ? 'Great Match' : 'Good Match'}
+              {(job.recommendationScore || 0) >= 80 ? 'Excellent Match' : (job.recommendationScore || 0) >= 50 ? 'Great Match' : 'Good Match'}
             </Text>
             <View style={styles.yellowBadge}>
               <StarIcon />

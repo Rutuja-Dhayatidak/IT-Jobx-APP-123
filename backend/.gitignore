@@ -1,1 +1,16 @@
 .env
+.env.*
+!.env.example
+
+*.pem
+*.key
+*.p12
+*.pfx
+
+service-account*.json
+firebase-adminsdk*.json
+
+secrets/
+credentials/
+node_modules/
+uploads/
