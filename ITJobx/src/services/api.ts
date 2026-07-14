@@ -1,15 +1,27 @@
-import { Platform } from 'react-native';
+import { Config } from "../config/app.config";
+import { authTokenService } from "./authToken.service";
 
-// Using localhost:5001 since adb reverse tcp:5001 tcp:5001 is active for physical Android devices / simulators
-export const BASE_URL = 'http://localhost:5001/api';
+export const BASE_URL = Config.API_BASE_URL;
 
 let authToken: string | null = null;
 
 export const setToken = (token: string | null) => {
   authToken = token;
+  if (token) {
+    authTokenService.saveAccessToken(token).catch(err => 
+      console.warn("Failed to persist access token in secure storage", err)
+    );
+  } else {
+    authTokenService.clearAllTokens().catch(err => 
+      console.warn("Failed to clear secure storage tokens", err)
+    );
+  }
 };
 
-export const getToken = () => {
+export const getToken = async (): Promise<string | null> => {
+  if (!authToken) {
+    authToken = await authTokenService.getAccessToken();
+  }
   return authToken;
 };
 
@@ -18,11 +30,12 @@ export async function apiRequest(endpoint: string, options: RequestInit = {}) {
   
   const headers = new Headers(options.headers || {});
   if (!(options.body instanceof FormData)) {
-    headers.set('Content-Type', 'application/json');
+    headers.set("Content-Type", "application/json");
   }
   
-  if (authToken) {
-    headers.set('Authorization', `Bearer ${authToken}`);
+  const currentToken = await getToken();
+  if (currentToken) {
+    headers.set("Authorization", `Bearer ${currentToken}`);
   }
 
   const config: RequestInit = {
@@ -32,22 +45,29 @@ export async function apiRequest(endpoint: string, options: RequestInit = {}) {
 
   try {
     const response = await fetch(url, config);
-    const contentType = response.headers.get('content-type');
+    const contentType = response.headers.get("content-type");
     
     let data;
-    if (contentType && contentType.includes('application/json')) {
+    if (contentType && contentType.includes("application/json")) {
       data = await response.json();
     } else {
       data = { message: await response.text() };
     }
 
     if (!response.ok) {
-      throw new Error(data.message || `Request failed with status ${response.status}`);
+      if (response.status === 401) {
+        // Clear invalid/expired token to trigger redirect to Login screen
+        setToken(null);
+      }
+      const errMsg = data.errors && Array.isArray(data.errors)
+        ? data.errors.map((e: any) => e.message).join("\n")
+        : (data.message || `Request failed with status ${response.status}`);
+      throw new Error(errMsg);
     }
 
     return data;
   } catch (error: any) {
-    console.error(`[API ERROR] ${options.method || 'GET'} ${endpoint}:`, error.message || error);
+    console.error(`[API ERROR] ${options.method || "GET"} ${endpoint}:`, error.message || error);
     throw error;
   }
 }
