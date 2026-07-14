@@ -6,6 +6,8 @@ export interface RegisterData {
   email: string;
   password?: string;
   phone?: string;
+  confirmPassword?: string;
+  termsAccepted?: boolean;
 }
 
 export const authService = {

@@ -84,6 +84,8 @@ export default function Register({ onLoginPress, onBackPress, onRegisterSuccess 
         email: email.trim().toLowerCase(),
         phone: phone.trim(),
         password,
+        confirmPassword: password,
+        termsAccepted: agree,
       });
 
       Alert.alert('Success', 'OTP sent to your email.');

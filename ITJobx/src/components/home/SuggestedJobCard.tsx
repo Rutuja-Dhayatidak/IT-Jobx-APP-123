@@ -116,11 +116,11 @@ export default function SuggestedJobCard({
 }: SuggestedJobCardProps) {
   const dynamicStyles = isDarkTheme ? darkStyles : lightStyles;
   
-  // Helper for company logo initial
-  const companyInitial = job.companyName.charAt(0).toUpperCase();
+  const companyName = (job.companyName || (job.company_id && typeof job.company_id === 'object' ? (job.company_id as any).name : '') || "Company") as string;
+  const companyInitial = (companyName.charAt(0) || 'C').toUpperCase();
 
   // Create a pleasant background color based on name
-  const code = job.companyName.charCodeAt(0) || 65;
+  const code = companyName.charCodeAt(0) || 65;
   const colors = ['#8B5CF6', '#3B82F6', '#10B981', '#F59E0B', '#EC4899', '#EF4444'];
   const logoBg = colors[code % colors.length];
 
