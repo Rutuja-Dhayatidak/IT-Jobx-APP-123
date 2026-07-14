@@ -65,8 +65,10 @@ export default function Register({ onLoginPress, onBackPress, onRegisterSuccess 
   const [secureText, setSecureText] = useState(true);
   const [agree, setAgree] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const handleSignUp = async () => {
+    setErrors({});
     if (!firstName.trim() || !lastName.trim() || !email.trim() || !phone.trim() || !password.trim()) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
@@ -93,7 +95,15 @@ export default function Register({ onLoginPress, onBackPress, onRegisterSuccess 
         onRegisterSuccess(email.trim().toLowerCase());
       }
     } catch (error: any) {
-      Alert.alert('Registration Failed', error.message || 'Something went wrong');
+      if (error.errors && Array.isArray(error.errors)) {
+        const validationErrors: Record<string, string> = {};
+        error.errors.forEach((err: any) => {
+          validationErrors[err.field] = err.message;
+        });
+        setErrors(validationErrors);
+      } else {
+        Alert.alert('Registration Failed', error.message || 'Something went wrong');
+      }
     } finally {
       setLoading(false);
     }
@@ -131,57 +141,113 @@ export default function Register({ onLoginPress, onBackPress, onRegisterSuccess 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>First Name</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, errors.firstName && styles.inputError]}
                 placeholder="Esther"
                 placeholderTextColor="#64748B"
                 value={firstName}
-                onChangeText={setFirstName}
+                onChangeText={(text) => {
+                  setFirstName(text);
+                  if (errors.firstName) {
+                    setErrors((prev) => {
+                      const copy = { ...prev };
+                      delete copy.firstName;
+                      return copy;
+                    });
+                  }
+                }}
               />
+              {errors.firstName ? (
+                <Text style={styles.errorText}>{errors.firstName}</Text>
+              ) : (
+                <Text style={styles.helpText}>Must contain at least 2 characters (alphabets only)</Text>
+              )}
             </View>
-
+ 
             {/* Last Name Field */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Last Name</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, errors.lastName && styles.inputError]}
                 placeholder="Howard"
                 placeholderTextColor="#64748B"
                 value={lastName}
-                onChangeText={setLastName}
+                onChangeText={(text) => {
+                  setLastName(text);
+                  if (errors.lastName) {
+                    setErrors((prev) => {
+                      const copy = { ...prev };
+                      delete copy.lastName;
+                      return copy;
+                    });
+                  }
+                }}
               />
+              {errors.lastName ? (
+                <Text style={styles.errorText}>{errors.lastName}</Text>
+              ) : (
+                <Text style={styles.helpText}>Optional (alphabets only)</Text>
+              )}
             </View>
-
+ 
             {/* Email Field */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Email</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, errors.email && styles.inputError]}
                 placeholder="example@gmail.com"
                 placeholderTextColor="#64748B"
                 keyboardType="email-address"
                 autoCapitalize="none"
                 value={email}
-                onChangeText={setEmail}
+                onChangeText={(text) => {
+                  setEmail(text);
+                  if (errors.email) {
+                    setErrors((prev) => {
+                      const copy = { ...prev };
+                      delete copy.email;
+                      return copy;
+                    });
+                  }
+                }}
               />
+              {errors.email ? (
+                <Text style={styles.errorText}>{errors.email}</Text>
+              ) : (
+                <Text style={styles.helpText}>Enter a valid email address</Text>
+              )}
             </View>
-
+ 
             {/* Phone Number Field */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Phone Number</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, errors.phone && styles.inputError]}
                 placeholder="+918767605792"
                 placeholderTextColor="#64748B"
                 keyboardType="phone-pad"
                 value={phone}
-                onChangeText={setPhone}
+                onChangeText={(text) => {
+                  setPhone(text);
+                  if (errors.phone) {
+                    setErrors((prev) => {
+                      const copy = { ...prev };
+                      delete copy.phone;
+                      return copy;
+                    });
+                  }
+                }}
               />
+              {errors.phone ? (
+                <Text style={styles.errorText}>{errors.phone}</Text>
+              ) : (
+                <Text style={styles.helpText}>Must be a 10-digit mobile number</Text>
+              )}
             </View>
-
+ 
             {/* Password Field */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Password</Text>
-              <View style={styles.passwordContainer}>
+              <View style={[styles.passwordContainer, (errors.password || errors.confirmPassword) && styles.inputError]}>
                 <TextInput
                   style={styles.passwordInput}
                   placeholder="***************"
@@ -189,7 +255,17 @@ export default function Register({ onLoginPress, onBackPress, onRegisterSuccess 
                   secureTextEntry={secureText}
                   autoCapitalize="none"
                   value={password}
-                  onChangeText={setPassword}
+                  onChangeText={(text) => {
+                    setPassword(text);
+                    if (errors.password || errors.confirmPassword) {
+                      setErrors((prev) => {
+                        const copy = { ...prev };
+                        delete copy.password;
+                        delete copy.confirmPassword;
+                        return copy;
+                      });
+                    }
+                  }}
                 />
                 <TouchableOpacity
                   onPress={() => setSecureText(!secureText)}
@@ -199,6 +275,13 @@ export default function Register({ onLoginPress, onBackPress, onRegisterSuccess 
                   <Text style={styles.eyeIcon}>{secureText ? '👁️' : '🙈'}</Text>
                 </TouchableOpacity>
               </View>
+              {errors.password ? (
+                <Text style={styles.errorText}>{errors.password}</Text>
+              ) : errors.confirmPassword ? (
+                <Text style={styles.errorText}>{errors.confirmPassword}</Text>
+              ) : (
+                <Text style={styles.helpText}>Min 8 characters (must include A-Z, a-z, 0-9 & special character)</Text>
+              )}
             </View>
 
             {/* Agree to Terms Checkbox */}
@@ -471,5 +554,21 @@ const styles = StyleSheet.create({
     color: '#3B82F6',
     textDecorationLine: 'underline',
     fontWeight: 'bold',
+  },
+  errorText: {
+    color: '#EF4444',
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 6,
+  },
+  inputError: {
+    borderColor: '#EF4444',
+    borderWidth: 1,
+  },
+  helpText: {
+    color: '#64748B',
+    fontSize: 11,
+    marginTop: 4,
+    marginLeft: 2,
   },
 });
