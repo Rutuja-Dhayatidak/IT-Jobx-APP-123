@@ -10,6 +10,7 @@ import {
   ScrollView,
   ActivityIndicator,
   Platform,
+  Image,
 } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
 import FadeInView from '../components/FadeInView';
@@ -256,7 +257,20 @@ export default function FindJob({ onBackPress, onNavigateToTab, onFilterPress, o
     return `${days}d ago`;
   };
 
-  const getCompanyLogo = (companyName: string) => {
+  const getCompanyLogo = (job: any) => {
+    const company = job.companyId;
+    const logoUri = company?.logo;
+    if (logoUri) {
+      return (
+        <Image 
+          source={{ uri: logoUri }} 
+          style={{ width: '100%', height: '100%', borderRadius: 12 }} 
+          resizeMode="cover"
+        />
+      );
+    }
+
+    const companyName = company?.name || 'Company';
     const name = companyName.toLowerCase();
     if (name.includes('figma')) return <FigmaIcon />;
     if (name.includes('google')) return <GoogleIcon />;
@@ -268,8 +282,8 @@ export default function FindJob({ onBackPress, onNavigateToTab, onFilterPress, o
     const selectedColor = colors[code % colors.length];
 
     return (
-      <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: selectedColor, justifyContent: 'center', alignItems: 'center' }}>
-        <Text style={{ color: '#FFF', fontSize: 12, fontWeight: '700' }}>{companyName.charAt(0).toUpperCase()}</Text>
+      <View style={{ width: '100%', height: '100%', borderRadius: 12, backgroundColor: selectedColor, justifyContent: 'center', alignItems: 'center' }}>
+        <Text style={{ color: '#FFF', fontSize: 16, fontWeight: '700' }}>{companyName.charAt(0).toUpperCase()}</Text>
       </View>
     );
   };
@@ -425,7 +439,7 @@ export default function FindJob({ onBackPress, onNavigateToTab, onFilterPress, o
                     {/* Card Main details (Logo and Info Column) */}
                     <View style={styles.cardMainInfo}>
                       <View style={[styles.logoWrapper, { backgroundColor: isDarkTheme ? '#1E293B' : '#F8FAFC', borderColor: isDarkTheme ? 'rgba(255,255,255,0.06)' : '#E2E8F0' }]}>
-                        {getCompanyLogo(companyName)}
+                        {getCompanyLogo(job)}
                       </View>
 
                       <View style={styles.infoColumn}>
@@ -682,7 +696,7 @@ const styles = StyleSheet.create({
   logoWrapper: {
     width: 48,
     height: 48,
-    borderRadius: 24,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,

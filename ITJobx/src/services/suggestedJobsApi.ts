@@ -4,7 +4,8 @@ export interface SuggestedJob {
   _id: string;
   title: string;
   companyName: string;
-  company_id?: string | { _id: string; name: string };
+  company_id?: string | { _id: string; name: string; logo?: string };
+  companyId?: string | { _id: string; name: string; logo?: string };
   location: string;
   jobType: string;
   minimumExperienceMonths: number;

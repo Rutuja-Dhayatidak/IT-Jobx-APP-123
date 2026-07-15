@@ -2,6 +2,12 @@ const { jobApiRateLimiterStore } = require("../config/rateLimiter.config");
 const { getClientIp } = require("../utils/rateLimitKeyGenerator");
 
 const jobRateLimiter = async (req, res, next) => {
+  // Bypass rate limiting in development/local environments
+  const env = require("../config/env.config");
+  if (env.NODE_ENV !== "production") {
+    return next();
+  }
+
   // If user is authenticated, use User ID. Otherwise, fallback to Client IP.
   const identifier = req.user ? (req.user.id || req.user._id || "").toString() : null;
   const key = identifier ? `user_${identifier}` : getClientIp(req);

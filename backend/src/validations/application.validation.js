@@ -3,6 +3,7 @@ const { objectIdSchema } = require("./common.validation");
 
 const applyJobSchema = z.object({
   jobId: objectIdSchema,
+  resumeUrl: z.string().url("Invalid resume URL").or(z.string().trim().min(1, "Resume is required")),
   coverLetter: z.string().trim().max(2000, "Cover letter cannot exceed 2000 characters").optional()
 }).strict("Unknown fields are not allowed");
 

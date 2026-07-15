@@ -18,6 +18,7 @@ import Svg, { Path, Circle } from 'react-native-svg';
 import { viewProfileService } from '../services/viewProfile';
 import { apiRequest } from '../services/api';
 import { pick, errorCodes, isErrorWithCode } from '@react-native-documents/picker';
+import AvatarPreviewModal from '../components/AvatarPreviewModal';
 
 interface PersonalInfoProps {
   onBackPress: () => void;
@@ -32,6 +33,7 @@ export default function PersonalInfo({ onBackPress, isDarkTheme = true }: Person
   const [position, setPosition] = useState('');
   const [profileImage, setProfileImage] = useState('');
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [previewVisible, setPreviewVisible] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -41,6 +43,24 @@ export default function PersonalInfo({ onBackPress, isDarkTheme = true }: Person
 
   const genders = ['Male', 'Female', 'Other', 'Prefer not to say'];
   const positions = ['Software Engineer', 'Product Manager', 'Data Scientist', 'UX Designer', 'Other'];
+
+  const handleAvatarDelete = async () => {
+    try {
+      setUploadingImage(true);
+      const res = await viewProfileService.updateProfile({ profileImage: "" });
+      if (res && res.success) {
+        setProfileImage('');
+        await fetchProfile();
+        Alert.alert('Success', 'Profile photo deleted successfully!');
+      } else {
+         Alert.alert('Error', 'Failed to delete profile photo.');
+      }
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to delete profile photo.');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
 
   const fetchProfile = async () => {
     try {
@@ -177,7 +197,7 @@ export default function PersonalInfo({ onBackPress, isDarkTheme = true }: Person
               <TouchableOpacity 
                 style={styles.avatarContainer} 
                 activeOpacity={0.8}
-                onPress={handleAvatarPick}
+                onPress={() => setPreviewVisible(true)}
                 disabled={uploadingImage}
               >
                 <View style={[styles.avatarCircle, { borderColor: dynamicStyles.cardBorder, overflow: 'hidden' }]}>
@@ -342,6 +362,14 @@ export default function PersonalInfo({ onBackPress, isDarkTheme = true }: Person
           <View style={{ height: 40 }} />
         </ScrollView>
       </KeyboardAvoidingView>
+      <AvatarPreviewModal
+        visible={previewVisible}
+        onClose={() => setPreviewVisible(false)}
+        imageUri={profileImage}
+        onUpdate={handleAvatarPick}
+        onDelete={handleAvatarDelete}
+        isDarkTheme={isDarkTheme}
+      />
     </SafeAreaView>
   );
 }

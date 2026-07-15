@@ -44,6 +44,12 @@ import PrivacyPolicy from './src/profile/PrivacyPolicy';
 import BottomNavigation from './src/components/BottomNavigation';
 import JobStatus from './src/screen/JobStatus';
 import { setToken, apiRequest } from './src/services/api';
+import { authService } from './src/services/authService';
+import AuthRequiredModal from './src/components/AuthRequiredModal';
+import ProfileIncompleteModal from './src/components/ProfileIncompleteModal';
+import ResumeRequiredModal from './src/components/ResumeRequiredModal';
+import { AuthProvider, useAuth } from './src/hooks/useAuth';
+import { ProtectedActionProvider, useProtectedAction } from './src/hooks/useProtectedAction';
 
 type ScreenName =
   | 'onboarding'
@@ -85,15 +91,34 @@ type ScreenName =
   | 'chat'
   | 'candidate_support';
 
-function App() {
+function MainAppContent() {
+  const {
+    accessToken: authToken,
+    user,
+    setAccessToken: setAuthToken,
+    setUser,
+    isLoading: isLoadingSession,
+  } = useAuth();
+
+  const {
+    pendingAction,
+    setPendingAction,
+    authModalVisible,
+    setAuthModalVisible,
+    profileIncompleteModalVisible,
+    setProfileIncompleteModalVisible,
+    resumeRequiredModalVisible,
+    setResumeRequiredModalVisible,
+    authModalMessage,
+    executeProtectedAction,
+  } = useProtectedAction();
+
   const [currentScreen, setCurrentScreen] = useState<ScreenName>('onboarding');
   const [screenHistory, setScreenHistory] = useState<ScreenName[]>(['onboarding']);
   const [resetEmail, setResetEmail] = useState('');
   const [isDarkTheme, setIsDarkTheme] = useState(false);
   const [selectedJob, setSelectedJob] = useState<any>(null);
   const [findJobInitialTab, setFindJobInitialTab] = useState<'available' | 'saved' | 'hire'>('available');
-  const [authToken, setAuthToken] = useState<string | null>(null);
-  const [user, setUser] = useState<any>(null);
   const [otpType, setOtpType] = useState<'register' | 'forgot_password'>('register');
   const [userLocation, setUserLocation] = useState('New York, USA');
   const [savedJobs, setSavedJobs] = useState<any[]>([]);
@@ -102,59 +127,113 @@ function App() {
   const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
   const [supportUnreadCount, setSupportUnreadCount] = useState(0);
   const [homeSearchQuery, setHomeSearchQuery] = useState('');
-  const [isLoadingSession, setIsLoadingSession] = useState(true);
+  const [yourProfileMissingFields, setYourProfileMissingFields] = useState<string[]>([]);
 
-  // Load persistent login session on startup
+  // Handle auto-navigation to Home on successful persistent session load
   useEffect(() => {
-    const loadSession = async () => {
-      try {
-        const savedToken = await AsyncStorage.getItem('authToken');
-        const savedUser = await AsyncStorage.getItem('user');
-        const savedLocation = await AsyncStorage.getItem('userLocation');
-        const savedBookmarks = await AsyncStorage.getItem('savedJobs');
-        
-        if (savedToken) {
-          setAuthToken(savedToken);
-          setToken(savedToken);
-          if (savedUser) {
-            setUser(JSON.parse(savedUser));
-          }
-          if (savedLocation) {
-            setUserLocation(savedLocation);
-          }
-          setCurrentScreen('home');
-          setScreenHistory(['home']);
-        }
+    if (!isLoadingSession && authToken) {
+      setCurrentScreen('home');
+      setScreenHistory(['home']);
+    }
+  }, [isLoadingSession, authToken]);
 
-        if (savedBookmarks) {
-          setSavedJobs(JSON.parse(savedBookmarks));
+  // Helper to resolve user-specific bookmark storage key
+  const getBookmarkStorageKey = (currentUser: any) => {
+    return currentUser ? `savedJobs_${currentUser._id || currentUser.id}` : 'savedJobs_guest';
+  };
+
+  // Load persistent location on startup
+  useEffect(() => {
+    const loadLocation = async () => {
+      try {
+        const savedLocation = await AsyncStorage.getItem('userLocation');
+        if (savedLocation) {
+          setUserLocation(savedLocation);
         }
       } catch (err) {
-        console.error('Error loading session:', err);
-      } finally {
-        setIsLoadingSession(false);
+        console.error('Error loading location:', err);
       }
     };
-    loadSession();
+    loadLocation();
   }, []);
 
-  // Persist savedJobs whenever it changes
+  // Load bookmarks dynamically when logged-in user changes (isolating Sunil/Ajay)
+  useEffect(() => {
+    const loadUserBookmarks = async () => {
+      try {
+        const key = getBookmarkStorageKey(user);
+        const savedBookmarks = await AsyncStorage.getItem(key);
+        
+        if (savedBookmarks) {
+          const parsed = JSON.parse(savedBookmarks);
+          setSavedJobs(parsed);
+
+          // Silently sync/refresh bookmarks with latest database details (including company logos)
+          try {
+            const data = await apiRequest('/jobs/published', { method: 'GET' });
+            if (data && data.success && data.jobs) {
+              const latestJobs = data.jobs;
+              const updatedBookmarks = parsed.map((savedJob: any) => {
+                const freshJob = latestJobs.find((j: any) => (j._id || j.id) === (savedJob._id || savedJob.id));
+                return freshJob ? freshJob : savedJob;
+              });
+              setSavedJobs(updatedBookmarks);
+              await AsyncStorage.setItem(key, JSON.stringify(updatedBookmarks));
+            }
+          } catch (apiErr) {
+            console.warn('Stale bookmark sync failed:', apiErr);
+          }
+        } else {
+          setSavedJobs([]);
+        }
+      } catch (err) {
+        console.error('Error loading bookmarks for user:', err);
+      }
+    };
+
+    if (!isLoadingSession) {
+      loadUserBookmarks();
+    }
+  }, [user, isLoadingSession]);
+
+  // Persist savedJobs to user-specific key whenever it changes
   useEffect(() => {
     const saveJobsToStorage = async () => {
       if (!isLoadingSession) {
         try {
-          await AsyncStorage.setItem('savedJobs', JSON.stringify(savedJobs));
+          const key = getBookmarkStorageKey(user);
+          await AsyncStorage.setItem(key, JSON.stringify(savedJobs));
         } catch (err) {
           console.error('Error saving bookmarked jobs:', err);
         }
       }
     };
     saveJobsToStorage();
-  }, [savedJobs, isLoadingSession]);
+  }, [savedJobs, user, isLoadingSession]);
 
-  useEffect(() => {
-    setToken(authToken);
-  }, [authToken]);
+  const handlePostAuthentication = async (token: string, loggedUser: any) => {
+    setAuthToken(token);
+    setUser(loggedUser);
+
+    if (pendingAction) {
+      const action = pendingAction;
+      setPendingAction(null); // Clear pending action
+
+      if (action.type === 'VIEW_PROFILE') {
+        navigateTo('your_profile');
+      } else if (action.type === 'SAVE_JOB') {
+        const isAlreadySaved = savedJobs.some((j) => (j._id || j.id) === action.jobId);
+        if (!isAlreadySaved && selectedJob) {
+          setSavedJobs((prev) => [...prev, selectedJob]);
+        }
+        navigateTo('job_detail');
+      } else if (action.type === 'APPLY_JOB') {
+        navigateTo('apply_job');
+      }
+    } else {
+      navigateTo('location');
+    }
+  };
 
   const checkUnreadNotifications = async () => {
     try {
@@ -237,15 +316,7 @@ function App() {
           onRegisterPress={() => navigateTo('register')}
           onBackPress={() => goBack()}
           onLoginSuccess={async (token, loggedUser) => {
-            try {
-              await AsyncStorage.setItem('authToken', token);
-              await AsyncStorage.setItem('user', JSON.stringify(loggedUser));
-            } catch (err) {
-              console.error('Error saving login session:', err);
-            }
-            setAuthToken(token);
-            setUser(loggedUser);
-            navigateTo('location');
+            handlePostAuthentication(token, loggedUser);
           }}
           onForgotPasswordPress={() => navigateTo('forgot_password')}
         />
@@ -277,13 +348,13 @@ function App() {
           onBackPress={() => goBack()}
           onVerifyPress={async (token) => {
             if (otpType === 'register') {
+              setToken(token);
               try {
-                await AsyncStorage.setItem('authToken', token);
-              } catch (err) {
-                console.error('Error saving session:', err);
+                const profile = await authService.getProfile();
+                handlePostAuthentication(token, profile);
+              } catch (e) {
+                handlePostAuthentication(token, { email: resetEmail });
               }
-              setAuthToken(token);
-              navigateTo('location');
             } else {
               navigateTo('reset_password');
             }
@@ -328,7 +399,17 @@ function App() {
           isDarkTheme={isDarkTheme}
           userLocation={userLocation}
           hasUnreadNotifications={hasUnreadNotifications}
-          onProfilePress={() => navigateTo('myprofile')}
+          onProfilePress={() => {
+            executeProtectedAction({
+              action: {
+                type: 'VIEW_PROFILE',
+                returnRoute: 'myprofile',
+              },
+              onSuccess: () => {
+                navigateTo('myprofile');
+              }
+            });
+          }}
           onNotificationPress={() => navigateTo('notification')}
           onFilterPress={() => navigateTo('filter')}
           onLocationPress={() => navigateTo('location')}
@@ -345,16 +426,33 @@ function App() {
           }}
           savedJobs={savedJobs}
           onToggleSave={(job) => {
-            const isAlreadySaved = savedJobs.some((j) => (j._id || j.id) === (job._id || job.id));
-            if (isAlreadySaved) {
-              setSavedJobs((prev) => prev.filter((j) => (j._id || j.id) !== (job._id || job.id)));
-            } else {
-              setSavedJobs((prev) => [...prev, job]);
-            }
+            executeProtectedAction({
+              action: {
+                type: 'SAVE_JOB',
+                jobId: job._id || job.id || '',
+                returnRoute: 'home',
+              },
+              onSuccess: () => {
+                const isAlreadySaved = savedJobs.some((j) => (j._id || j.id) === (job._id || job.id));
+                if (isAlreadySaved) {
+                  setSavedJobs((prev) => prev.filter((j) => (j._id || j.id) !== (job._id || job.id)));
+                } else {
+                  setSavedJobs((prev) => [...prev, job]);
+                }
+              }
+            });
           }}
           onNavigateToTab={(tab) => {
             if (tab === 'profile') {
-              navigateTo('myprofile');
+              executeProtectedAction({
+                action: {
+                  type: 'VIEW_PROFILE',
+                  returnRoute: 'myprofile',
+                },
+                onSuccess: () => {
+                  navigateTo('myprofile');
+                }
+              });
             } else if (tab === 'portfolio') {
               setFindJobInitialTab('available');
               navigateTo('find_job');
@@ -366,6 +464,10 @@ function App() {
             } else if (tab === 'chat') {
               navigateTo('notification');
             }
+          }}
+          onCompleteProfilePress={(missing) => {
+            setYourProfileMissingFields(missing);
+            navigateTo('your_profile');
           }}
         />
       )}
@@ -427,6 +529,7 @@ function App() {
           onBackPress={() => goBack()}
           isDarkTheme={isDarkTheme}
           onNavigateTo={navigateTo}
+          missingFields={yourProfileMissingFields}
         />
       )}
       {currentScreen === 'password_manager' && (
@@ -570,11 +673,15 @@ function App() {
             if (tab === 'home') {
               navigateTo('home');
             } else if (tab === 'profile') {
-              if (!authToken) {
-                navigateTo('login');
-              } else {
-                navigateTo('myprofile');
-              }
+              executeProtectedAction({
+                action: {
+                  type: 'VIEW_PROFILE',
+                  returnRoute: 'myprofile',
+                },
+                onSuccess: () => {
+                  navigateTo('myprofile');
+                }
+              });
             } else if (tab === 'chat') {
               navigateTo('notification');
             } else if (tab === 'saved') {
@@ -610,11 +717,15 @@ function App() {
             if (tab === 'home') {
               navigateTo('home');
             } else if (tab === 'profile') {
-              if (!authToken) {
-                navigateTo('login');
-              } else {
-                navigateTo('myprofile');
-              }
+              executeProtectedAction({
+                action: {
+                  type: 'VIEW_PROFILE',
+                  returnRoute: 'myprofile',
+                },
+                onSuccess: () => {
+                  navigateTo('myprofile');
+                }
+              });
             } else if (tab === 'portfolio') {
               setFindJobInitialTab('available');
               navigateTo('find_job');
@@ -671,11 +782,15 @@ function App() {
             } else if (tab === 'chat') {
               navigateTo('candidate_support');
             } else if (tab === 'profile') {
-              if (!authToken) {
-                navigateTo('login');
-              } else {
-                navigateTo('myprofile');
-              }
+              executeProtectedAction({
+                action: {
+                  type: 'VIEW_PROFILE',
+                  returnRoute: 'myprofile',
+                },
+                onSuccess: () => {
+                  navigateTo('myprofile');
+                }
+              });
             }
           }}
         />
@@ -685,16 +800,36 @@ function App() {
           job={selectedJob}
           isDarkTheme={isDarkTheme}
           onBackPress={() => goBack()}
-          onApplyPress={() => navigateTo('apply_job')}
+          onApplyPress={() => {
+            executeProtectedAction({
+              action: {
+                type: 'APPLY_JOB',
+                jobId: selectedJob?._id || selectedJob?.id || '',
+                returnRoute: 'job_detail',
+              },
+              onSuccess: () => {
+                navigateTo('apply_job');
+              }
+            });
+          }}
           isSaved={savedJobs.some((j) => (j._id || j.id) === (selectedJob?._id || selectedJob?.id))}
           onToggleSave={() => {
             if (!selectedJob) return;
-            const isAlreadySaved = savedJobs.some((j) => (j._id || j.id) === (selectedJob._id || selectedJob.id));
-            if (isAlreadySaved) {
-              setSavedJobs((prev) => prev.filter((j) => (j._id || j.id) !== (selectedJob._id || selectedJob.id)));
-            } else {
-              setSavedJobs((prev) => [...prev, selectedJob]);
-            }
+            executeProtectedAction({
+              action: {
+                type: 'SAVE_JOB',
+                jobId: selectedJob?._id || selectedJob?.id || '',
+                returnRoute: 'job_detail',
+              },
+              onSuccess: () => {
+                const isAlreadySaved = savedJobs.some((j) => (j._id || j.id) === (selectedJob._id || selectedJob.id));
+                if (isAlreadySaved) {
+                  setSavedJobs((prev) => prev.filter((j) => (j._id || j.id) !== (selectedJob._id || selectedJob.id)));
+                } else {
+                  setSavedJobs((prev) => [...prev, selectedJob]);
+                }
+              }
+            });
           }}
         />
       )}
@@ -726,8 +861,62 @@ function App() {
           onBackPress={() => goBack()}
         />
       )}
+
+      <AuthRequiredModal
+        visible={authModalVisible}
+        message={authModalMessage}
+        onLogin={() => {
+          setAuthModalVisible(false);
+          navigateTo('login');
+        }}
+        onRegister={() => {
+          setAuthModalVisible(false);
+          navigateTo('register');
+        }}
+        onCancel={() => {
+          setAuthModalVisible(false);
+          setPendingAction(null);
+        }}
+        isDarkTheme={isDarkTheme}
+      />
+
+      <ProfileIncompleteModal
+        visible={profileIncompleteModalVisible}
+        message="Please complete your profile before applying for this job."
+        onComplete={() => {
+          setProfileIncompleteModalVisible(false);
+          navigateTo('your_profile');
+        }}
+        onCancel={() => {
+          setProfileIncompleteModalVisible(false);
+          setPendingAction(null);
+        }}
+        isDarkTheme={isDarkTheme}
+      />
+
+      <ResumeRequiredModal
+        visible={resumeRequiredModalVisible}
+        message="Please upload your resume before applying for this job."
+        onUpload={() => {
+          setResumeRequiredModalVisible(false);
+          navigateTo('resume');
+        }}
+        onCancel={() => {
+          setResumeRequiredModalVisible(false);
+          setPendingAction(null);
+        }}
+        isDarkTheme={isDarkTheme}
+      />
     </SafeAreaProvider>
   );
 }
 
-export default App;
+export default function App() {
+  return (
+    <AuthProvider>
+      <ProtectedActionProvider>
+        <MainAppContent />
+      </ProtectedActionProvider>
+    </AuthProvider>
+  );
+}

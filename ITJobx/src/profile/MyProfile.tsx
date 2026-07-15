@@ -17,10 +17,13 @@ import {
 import { authService } from '../services/authService';
 import { viewProfileService } from '../services/viewProfile';
 import { apiRequest } from '../services/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { pick, errorCodes, isErrorWithCode } from '@react-native-documents/picker';
 import Svg, { Path, Circle } from 'react-native-svg';
 import BottomNavigation from '../components/BottomNavigation';
 import FadeInView from '../components/FadeInView';
+import AvatarPreviewModal from '../components/AvatarPreviewModal';
+
 interface MyProfileProps {
   onBackPress?: () => void;
   onNavigateToTab?: (tab: string) => void;
@@ -103,14 +106,39 @@ export default function MyProfile({ onBackPress, onNavigateToTab, onSettingsPres
   const [profileImage, setProfileImage] = useState<string>('');
   const [uploadingImage, setUploadingImage] = useState(false);
   const [completionPercentage, setCompletionPercentage] = useState(0);
+  const [previewVisible, setPreviewVisible] = useState(false);
+
+  // Stats and details states for mockup layout
+  const [profileData, setProfileData] = useState<any>(null);
+  const [applicationsCount, setApplicationsCount] = useState(0);
+  const [savedJobsCount, setSavedJobsCount] = useState(0);
 
   const loadProfile = async () => {
     try {
       const data = await viewProfileService.getProfile();
+      let userId = '';
       if (data && data.success) {
         setProfile(data.profile.userId);
         setProfileImage(data.profile.profileImage || '');
         setCompletionPercentage(data.completionPercentage || 0);
+        setProfileData(data.profile);
+        userId = data.profile.userId?._id || data.profile.userId?.id || '';
+      }
+
+      // Fetch applications count
+      const appsRes = await apiRequest('/applications/my-applications', { method: 'GET' });
+      if (appsRes && appsRes.success) {
+        setApplicationsCount(appsRes.applications?.length || 0);
+      }
+
+      // Fetch saved jobs count from local cache storage
+      const key = userId ? `savedJobs_${userId}` : 'savedJobs_guest';
+      const savedStr = await AsyncStorage.getItem(key);
+      if (savedStr) {
+        const parsed = JSON.parse(savedStr);
+        setSavedJobsCount(parsed.length || 0);
+      } else {
+        setSavedJobsCount(0);
       }
     } catch (err) {
       console.error('Failed to load profile details in MyProfile:', err);
@@ -120,6 +148,31 @@ export default function MyProfile({ onBackPress, onNavigateToTab, onSettingsPres
   useEffect(() => {
     loadProfile();
   }, []);
+
+  const getProfileStrength = (percent: number) => {
+    if (percent < 50) return 'Average';
+    if (percent < 80) return 'Good';
+    return 'Excellent';
+  };
+  const profileStrength = getProfileStrength(completionPercentage);
+
+  const handleAvatarDelete = async () => {
+    try {
+      setUploadingImage(true);
+      const res = await viewProfileService.updateProfile({ profileImage: "" });
+      if (res && res.success) {
+        setProfileImage('');
+        await loadProfile();
+        Alert.alert('Success', 'Profile photo deleted successfully!');
+      } else {
+         Alert.alert('Error', 'Failed to delete profile photo.');
+      }
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to delete profile photo.');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
 
   const handleAvatarPick = async () => {
     try {
@@ -210,72 +263,140 @@ export default function MyProfile({ onBackPress, onNavigateToTab, onSettingsPres
           <View style={{ width: 44 }} />
         </View>
 
-        {/* Profile Card Container (Blue Gradient style) */}
+        {/* Profile Card Container (Blue Gradient mockup style) */}
         <View style={styles.profileCard}>
-          {/* Avatar Image Picker */}
-          <TouchableOpacity
-            style={styles.avatarWrapper}
-            activeOpacity={0.8}
-            onPress={handleAvatarPick}
-            disabled={uploadingImage}
-          >
-            <View style={styles.avatarPlaceholder}>
-              {uploadingImage ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : profileImage ? (
-                <Image source={{ uri: profileImage }} style={styles.avatarImage} />
-              ) : (
-                /* Profile silhouette */
-                <Svg width={46} height={46} viewBox="0 0 24 24" fill="#FFFFFF">
-                  <Path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+          {/* Top Row: Avatar, Name & Role, Progress Ring */}
+          <View style={styles.cardTopRow}>
+            {/* Avatar Image Picker with White border */}
+            <TouchableOpacity
+              style={styles.avatarWrapperMock}
+              activeOpacity={0.8}
+              onPress={() => setPreviewVisible(true)}
+              disabled={uploadingImage}
+            >
+              <View style={styles.avatarPlaceholderMock}>
+                {uploadingImage ? (
+                  <ActivityIndicator size="small" color="#2563EB" />
+                ) : profileImage ? (
+                  <Image source={{ uri: profileImage }} style={styles.avatarImageMock} />
+                ) : (
+                  <Svg width={42} height={42} viewBox="0 0 24 24" fill="#64748B">
+                    <Path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                  </Svg>
+                )}
+              </View>
+              {/* Blue edit pencil circle badge */}
+              <View style={styles.editBadgeMock}>
+                <Svg width={10} height={10} viewBox="0 0 24 24" fill="none">
+                  <Path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a.996.996 0 000-1.41l-2.34-2.34a.996.996 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" fill="#FFFFFF" />
                 </Svg>
-              )}
-            </View>
-            <View style={styles.editBadge}>
-              <Svg width={10} height={10} viewBox="0 0 24 24" fill="none">
-                <Path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a.996.996 0 000-1.41l-2.34-2.34a.996.996 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" fill="#FFFFFF" />
-              </Svg>
-            </View>
-          </TouchableOpacity>
-
-          {/* User Details */}
-          <View style={styles.profileDetails}>
-            <Text style={styles.profileName}>
-              {profile ? `${profile.firstName || ''} ${profile.lastName || ''}`.trim() : 'Marion Torphy'}
-            </Text>
-            <TouchableOpacity activeOpacity={0.7} onPress={() => onNavigateTo && onNavigateTo('your_profile')}>
-              <Text style={styles.viewProfileText}>View Profile</Text>
+              </View>
             </TouchableOpacity>
+
+            {/* Name, Role & View Profile Button */}
+            <View style={styles.profileDetailsMock}>
+              <Text style={styles.profileNameMock} numberOfLines={1}>
+                {profile ? `${profile.firstName || ''} ${profile.lastName || ''}`.trim() : ''}
+              </Text>
+              <Text style={styles.profileRoleMock}>
+                {profileData?.position || profileData?.preferredJobRole || 'Job Seeker'}
+              </Text>
+              
+              <TouchableOpacity
+                style={styles.viewProfileBtnMock}
+                activeOpacity={0.8}
+                onPress={() => onNavigateTo && onNavigateTo('your_profile')}
+              >
+                {/* Eye icon SVG */}
+                <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" style={{ marginRight: 6 }}>
+                  <Path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" fill="#FFFFFF" />
+                </Svg>
+                <Text style={styles.viewProfileTextMock}>View Profile</Text>
+                <Text style={styles.viewProfileArrowMock}>➔</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Circle Progress Tracker on the Right */}
+            <View style={styles.rightProgressContainerMock}>
+              <View style={styles.progressRingWrapperMock}>
+                <Svg width={54} height={54} viewBox="0 0 60 60">
+                  <Circle
+                    cx="30"
+                    cy="30"
+                    r="26"
+                    stroke="rgba(255, 255, 255, 0.18)"
+                    strokeWidth="4"
+                    fill="transparent"
+                  />
+                  <Circle
+                    cx="30"
+                    cy="30"
+                    r="26"
+                    stroke="#FBBF24" // Yellow completion ring
+                    strokeWidth="4"
+                    fill="transparent"
+                    strokeDasharray={2 * Math.PI * 26}
+                    strokeDashoffset={2 * Math.PI * 26 - (completionPercentage / 100) * (2 * Math.PI * 26)}
+                    strokeLinecap="round"
+                    transform="rotate(-90 30 30)"
+                  />
+                </Svg>
+                <View style={styles.progressTextContainerMock}>
+                  <Text style={styles.progressPercentTextMock}>{completionPercentage}%</Text>
+                </View>
+              </View>
+              <Text style={styles.progressLabelMock}>Profile Complete</Text>
+              <Text style={styles.progressSubtitleMock}>Add more details to get better job matches</Text>
+            </View>
           </View>
 
-          {/* Circle Progress Tracker */}
-          <View style={styles.progressWrapper}>
-            <Svg width={66} height={66} viewBox="0 0 66 66">
-              <Circle
-                cx="33"
-                cy="33"
-                r={radius}
-                stroke="#FFFFFF"
-                strokeWidth={strokeWidth}
-                fill="transparent"
-                opacity={0.2}
-              />
-              <Circle
-                cx="33"
-                cy="33"
-                r={radius}
-                stroke="#FBBF24" // Yellow completion ring
-                strokeWidth={strokeWidth}
-                fill="transparent"
-                strokeDasharray={circumference}
-                strokeDashoffset={progressOffset}
-                strokeLinecap="round"
-                transform="rotate(-90 33 33)"
-              />
-              <View style={styles.progressTextContainer}>
-                <Text style={styles.progressPercentText}>{completionPercentage}%</Text>
+          {/* Bottom Row Stats Grid */}
+          <View style={styles.cardBottomRowMock}>
+            {/* Stat 1: Applications */}
+            <View style={styles.statItemMock}>
+              <View style={styles.statIconContainerMock}>
+                {/* Briefcase SVG */}
+                <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+                  <Path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z" fill="#FFFFFF" />
+                </Svg>
               </View>
-            </Svg>
+              <View style={styles.statTextColumnMock}>
+                <Text style={styles.statValueMock}>{applicationsCount}</Text>
+                <Text style={styles.statLabelMock} numberOfLines={1}>Applications</Text>
+              </View>
+            </View>
+
+            <View style={styles.verticalDividerMock} />
+
+            {/* Stat 2: Saved Jobs */}
+            <View style={styles.statItemMock}>
+              <View style={styles.statIconContainerMock}>
+                {/* Bookmark SVG */}
+                <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+                  <Path d="M17 3H7c-1.1 0-1.99.9-1.99 2L5 21l7-3 7 3V5c0-1.1-.9-2-2-2z" fill="#FFFFFF" />
+                </Svg>
+              </View>
+              <View style={styles.statTextColumnMock}>
+                <Text style={styles.statValueMock}>{savedJobsCount}</Text>
+                <Text style={styles.statLabelMock} numberOfLines={1}>Saved Jobs</Text>
+              </View>
+            </View>
+
+            <View style={styles.verticalDividerMock} />
+
+            {/* Stat 3: Profile Strength */}
+            <View style={styles.statItemMock}>
+              <View style={styles.statIconContainerMock}>
+                {/* Graph/Gauge SVG */}
+                <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+                  <Path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H7c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.04-.42 1.99-1.07 2.75z" fill="#FFFFFF" />
+                </Svg>
+              </View>
+              <View style={styles.statTextColumnMock}>
+                <Text style={styles.statValueMock}>{profileStrength}</Text>
+                <Text style={styles.statLabelMock} numberOfLines={1}>Profile Strength</Text>
+              </View>
+            </View>
           </View>
         </View>
 
@@ -364,6 +485,15 @@ export default function MyProfile({ onBackPress, onNavigateToTab, onSettingsPres
           </View>
         </TouchableOpacity>
       </Modal>
+
+      <AvatarPreviewModal
+        visible={previewVisible}
+        onClose={() => setPreviewVisible(false)}
+        imageUri={profileImage}
+        onUpdate={handleAvatarPick}
+        onDelete={handleAvatarDelete}
+        isDarkTheme={isDarkTheme}
+      />
     </SafeAreaView>
   );
 }
@@ -400,83 +530,182 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   profileCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#2563EB', // Blue card background
-    borderRadius: 24,
-    padding: 24,
-    marginHorizontal: 24,
+    backgroundColor: '#1E40AF', // Blue card background
+    borderRadius: 28,
+    paddingTop: 24,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    marginHorizontal: 20,
     marginTop: 20,
     marginBottom: 24,
+    shadowColor: '#1E40AF',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 15,
+    elevation: 10,
   },
-  avatarWrapper: {
+  cardTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+    marginBottom: 20,
+  },
+  avatarWrapperMock: {
     position: 'relative',
   },
-  avatarPlaceholder: {
+  avatarPlaceholderMock: {
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2.5,
     borderColor: '#FFFFFF',
     overflow: 'hidden',
   },
-  avatarImage: {
+  avatarImageMock: {
     width: '100%',
     height: '100%',
     borderRadius: 36,
   },
-  editBadge: {
+  editBadgeMock: {
     position: 'absolute',
-    bottom: 0,
-    right: 0,
+    bottom: -2,
+    right: -2,
     backgroundColor: '#3B82F6',
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#2563EB',
+    borderWidth: 2.5,
+    borderColor: '#1E40AF',
   },
-  profileDetails: {
+  profileDetailsMock: {
     flex: 1,
-    marginLeft: 16,
+    marginLeft: 12,
+    justifyContent: 'center',
   },
-  profileName: {
-    fontSize: 20,
-    fontWeight: 'bold',
+  profileNameMock: {
+    fontSize: 18,
+    fontWeight: '800',
     color: '#FFFFFF',
-    marginBottom: 4,
+    fontFamily: 'Outfit',
+    marginBottom: 2,
   },
-  viewProfileText: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.8)',
-    marginTop: 4,
-    textDecorationLine: 'underline',
+  profileRoleMock: {
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.75)',
+    fontWeight: '600',
+    fontFamily: 'Outfit',
+    marginBottom: 8,
   },
-  progressWrapper: {
+  viewProfileBtnMock: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 12,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  viewProfileTextMock: {
+    fontSize: 12,
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontFamily: 'Outfit',
+  },
+  viewProfileArrowMock: {
+    fontSize: 10,
+    color: '#FFFFFF',
+    marginLeft: 4,
+  },
+  rightProgressContainerMock: {
+    alignItems: 'center',
+    marginLeft: 10,
+  },
+  progressRingWrapperMock: {
     position: 'relative',
-    width: 60,
-    height: 60,
+    width: 54,
+    height: 54,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  progressTextContainer: {
+  progressTextContainerMock: {
     position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  progressPercentText: {
+  progressPercentTextMock: {
     color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: 'bold',
+    fontSize: 12,
+    fontWeight: '800',
+    fontFamily: 'Outfit',
+  },
+  progressLabelMock: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginTop: 4,
+    fontFamily: 'Outfit',
+  },
+  progressSubtitleMock: {
+    fontSize: 7.5,
+    color: 'rgba(255, 255, 255, 0.65)',
+    textAlign: 'center',
+    marginTop: 1,
+    width: 80,
+    lineHeight: 10,
+    fontFamily: 'Outfit',
+  },
+  cardBottomRowMock: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.12)',
+    paddingTop: 16,
+    width: '100%',
+  },
+  statItemMock: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    justifyContent: 'center',
+  },
+  statIconContainerMock: {
+    width: 30,
+    height: 30,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  statTextColumnMock: {
+    justifyContent: 'center',
+  },
+  statValueMock: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    fontFamily: 'Outfit',
+    lineHeight: 16,
+  },
+  statLabelMock: {
+    fontSize: 9.5,
+    color: 'rgba(255, 255, 255, 0.75)',
+    fontWeight: '600',
+    fontFamily: 'Outfit',
+    marginTop: 1,
+  },
+  verticalDividerMock: {
+    width: 1,
+    height: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
   },
   optionsList: {
     paddingHorizontal: 24,

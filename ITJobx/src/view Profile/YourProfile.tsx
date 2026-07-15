@@ -15,6 +15,7 @@ interface YourProfileProps {
   onBackPress: () => void;
   isDarkTheme?: boolean;
   onNavigateTo?: (screen: any) => void;
+  missingFields?: string[];
 }
 
 // Icons definitions
@@ -91,7 +92,7 @@ const ResumeIcon = () => (
   </Svg>
 );
 
-export default function YourProfile({ onBackPress, isDarkTheme = true, onNavigateTo }: YourProfileProps) {
+export default function YourProfile({ onBackPress, isDarkTheme = true, onNavigateTo, missingFields = [] }: YourProfileProps) {
   const [profile, setProfile] = useState<any>(null);
 
   useEffect(() => {
@@ -132,6 +133,14 @@ export default function YourProfile({ onBackPress, isDarkTheme = true, onNavigat
     { title: 'Resume/CV', icon: <ResumeIcon />, completed: resumeCompleted, sectionKey: 'resume' },
   ];
 
+  const missingSectionKeys: string[] = [];
+  if (missingFields.includes('skills')) missingSectionKeys.push('skills');
+  if (missingFields.includes('experience')) missingSectionKeys.push('experience');
+  if (missingFields.includes('education')) missingSectionKeys.push('education');
+  if (missingFields.includes('resume')) missingSectionKeys.push('resume');
+  if (missingFields.includes('location')) missingSectionKeys.push('contact_info');
+  if (missingFields.includes('preferredJobRole')) missingSectionKeys.push('about_me');
+
   const completedCount = profileSections.filter(s => s.completed).length;
   const progressPercent = completedCount * 10;
 
@@ -164,33 +173,40 @@ export default function YourProfile({ onBackPress, isDarkTheme = true, onNavigat
 
       {/* Checklist Scroll */}
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {profileSections.map((section, index) => (
-          <TouchableOpacity
-            key={index}
-            style={[styles.optionRow, { backgroundColor: dynamicStyles.cardBg, borderColor: dynamicStyles.cardBorder }]}
-            activeOpacity={0.7}
-            onPress={() => {
-              if (section.sectionKey && onNavigateTo) {
-                onNavigateTo(section.sectionKey);
-              }
-            }}
-          >
-            <View style={styles.leftContainer}>
-              <View style={styles.iconWrapper}>
-                {section.icon}
+        {profileSections.map((section, index) => {
+          const isHighlighted = missingSectionKeys.includes(section.sectionKey || '');
+          return (
+            <TouchableOpacity
+              key={index}
+              style={[
+                styles.optionRow,
+                { backgroundColor: dynamicStyles.cardBg, borderColor: isHighlighted ? '#EF4444' : dynamicStyles.cardBorder },
+                isHighlighted && { borderWidth: 1.5, shadowColor: '#EF4444', shadowOpacity: 0.1, shadowRadius: 5, elevation: 3 }
+              ]}
+              activeOpacity={0.7}
+              onPress={() => {
+                if (section.sectionKey && onNavigateTo) {
+                  onNavigateTo(section.sectionKey);
+                }
+              }}
+            >
+              <View style={styles.leftContainer}>
+                <View style={styles.iconWrapper}>
+                  {section.icon}
+                </View>
+                <Text style={[styles.optionTitle, { color: dynamicStyles.textColor }]}>
+                  {section.title}
+                </Text>
               </View>
-              <Text style={[styles.optionTitle, { color: dynamicStyles.textColor }]}>
-                {section.title}
-              </Text>
-            </View>
 
-            {section.completed ? (
-              <CheckmarkIcon />
-            ) : (
-              <ChevronRightIcon color="#2563EB" />
-            )}
-          </TouchableOpacity>
-        ))}
+              {section.completed ? (
+                <CheckmarkIcon />
+              ) : (
+                <ChevronRightIcon color={isHighlighted ? '#EF4444' : '#2563EB'} />
+              )}
+            </TouchableOpacity>
+          );
+        })}
       </ScrollView>
     </SafeAreaView>
   );

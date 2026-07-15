@@ -150,11 +150,17 @@ export default function Location({ onFinish, onBackPress }: LocationProps) {
               <Text style={styles.searchIcon}>🔍</Text>
               <TextInput
                 style={styles.searchInput}
-                placeholder="Golden Avenue"
+                placeholder="Enter Location (e.g. Pune, India)"
                 placeholderTextColor="#64748B"
                 value={searchQuery}
                 onChangeText={setSearchQuery}
                 autoFocus
+                returnKeyType="done"
+                onSubmitEditing={() => {
+                  if (searchQuery.trim()) {
+                    handleSelectLocation(searchQuery.trim());
+                  }
+                }}
               />
               {searchQuery.length > 0 && (
                 <TouchableOpacity onPress={() => setSearchQuery('')} activeOpacity={0.7}>
@@ -185,6 +191,23 @@ export default function Location({ onFinish, onBackPress }: LocationProps) {
 
             {/* Results Scroll List */}
             <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
+              {searchQuery.trim() !== '' && (
+                <TouchableOpacity
+                  style={styles.resultItem}
+                  onPress={() => handleSelectLocation(searchQuery.trim())}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.resultIconContainer, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
+                    <Svg width={18} height={18} viewBox="0 0 24 24" fill="#2563EB">
+                      <Path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                    </Svg>
+                  </View>
+                  <View style={styles.resultTextContainer}>
+                    <Text style={[styles.resultTitle, { color: '#2563EB', fontWeight: 'bold' }]}>Use "{searchQuery.trim()}"</Text>
+                    <Text style={styles.resultSubtitle}>Select this typed location</Text>
+                  </View>
+                </TouchableOpacity>
+              )}
               {filteredResults.map((item, index) => (
                 <TouchableOpacity
                   key={index}

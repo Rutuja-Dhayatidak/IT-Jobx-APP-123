@@ -3,6 +3,11 @@ const { getLimiterKey } = require("../utils/rateLimitKeyGenerator");
 const env = require("../config/env.config");
 
 const loginRateLimiter = async (req, res, next) => {
+  // Bypass rate limiting in development/local testing
+  if (env.NODE_ENV !== "production") {
+    return next();
+  }
+
   const email = req.body.email;
   if (!email || typeof email !== "string") {
     return next();

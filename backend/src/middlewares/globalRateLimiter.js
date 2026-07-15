@@ -2,6 +2,12 @@ const { globalRateLimiterStore } = require("../config/rateLimiter.config");
 const { getClientIp } = require("../utils/rateLimitKeyGenerator");
 
 const globalRateLimiter = async (req, res, next) => {
+  // Bypass rate limiting in development/local environments
+  const env = require("../config/env.config");
+  if (env.NODE_ENV !== "production") {
+    return next();
+  }
+
   // Exclude health check endpoint from global rate limiting
   if (req.path === "/health" || req.path === "/api/health") {
     return next();

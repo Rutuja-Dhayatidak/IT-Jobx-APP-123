@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, Image } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { SuggestedJob } from '../../services/suggestedJobsApi';
 
@@ -116,13 +116,16 @@ export default function SuggestedJobCard({
 }: SuggestedJobCardProps) {
   const dynamicStyles = isDarkTheme ? darkStyles : lightStyles;
   
-  const companyName = (job.companyName || (job.company_id && typeof job.company_id === 'object' ? (job.company_id as any).name : '') || "Company") as string;
+  const company = job.companyId || job.company_id;
+  const companyName = (job.companyName || (company && typeof company === 'object' ? (company as any).name : '') || "Company") as string;
   const companyInitial = (companyName.charAt(0) || 'C').toUpperCase();
 
   // Create a pleasant background color based on name
   const code = companyName.charCodeAt(0) || 65;
   const colors = ['#8B5CF6', '#3B82F6', '#10B981', '#F59E0B', '#EC4899', '#EF4444'];
   const logoBg = colors[code % colors.length];
+
+  const logoUri = (company && typeof company === 'object' ? (company as any).logo : '') || (job as any).companyLogo || (job as any).logo || '';
 
   // Limit matched skills rendering
   const maxSkillsShow = 4;
@@ -144,8 +147,16 @@ export default function SuggestedJobCard({
 
       {/* Upper Section */}
       <View style={styles.headerRow}>
-        <View style={[styles.companyLogo, { backgroundColor: logoBg }]}>
-          <Text style={styles.logoText}>{companyInitial}</Text>
+        <View style={[styles.companyLogo, { backgroundColor: logoBg, overflow: 'hidden' }]}>
+          {logoUri ? (
+            <Image 
+              source={{ uri: logoUri }} 
+              style={{ width: '100%', height: '100%' }} 
+              resizeMode="cover"
+            />
+          ) : (
+            <Text style={styles.logoText}>{companyInitial}</Text>
+          )}
         </View>
         <View style={styles.titleCol}>
           <Text style={[styles.jobTitle, { color: dynamicStyles.textColor }]} numberOfLines={1}>
@@ -153,7 +164,7 @@ export default function SuggestedJobCard({
           </Text>
           <View style={styles.companyRow}>
             <Text style={[styles.companyName, { color: dynamicStyles.labelColor }]} numberOfLines={1}>
-              {job.companyName}
+              {companyName}
             </Text>
             <VerifiedIcon />
           </View>

@@ -100,7 +100,9 @@ export default function MyApplication({ onBackPress, isDarkTheme = true, onAppli
           <ActivityIndicator size="large" color="#2563EB" style={{ marginTop: 40 }} />
         ) : error ? (
           <View style={{ alignItems: 'center', marginTop: 40 }}>
-            <Text style={{ color: '#EF4444', fontSize: 15, textAlign: 'center' }}>{error}</Text>
+            <Text style={{ color: '#EF4444', fontSize: 15, textAlign: 'center' }}>
+              {error.toLowerCase() === 'no token provided' ? 'Login plz/register' : error}
+            </Text>
           </View>
         ) : applications.length === 0 ? (
           <View style={{ alignItems: 'center', marginTop: 60, paddingHorizontal: 20 }}>

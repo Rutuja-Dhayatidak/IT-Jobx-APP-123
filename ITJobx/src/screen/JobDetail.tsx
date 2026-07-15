@@ -237,210 +237,137 @@ Apply now using the ITJobx App!`;
             <Text style={[styles.footerText, { color: dynamicStyles.subLabelColor }]}>Posted 2 days ago  •  345 applicants</Text>
           </View>
         </View>
+        <View>
+          {/* Card 1: About the Role */}
+          <View style={[styles.contentCard, { backgroundColor: dynamicStyles.cardBg, borderColor: dynamicStyles.cardBorder }]}>
+            <Text style={[styles.cardTitle, { color: dynamicStyles.textColor }]}>About the Role</Text>
+            <Text style={[styles.cardDescriptionText, { color: dynamicStyles.labelColor }]}>
+              {jobInfo.description || "We are looking for a skilled Frontend Developer to join our team and build amazing user experiences. You will work on building responsive web applications and collaborate with cross-functional teams."}
+            </Text>
+          </View>
 
-        {/* Tab Segment Selector */}
-        <View style={[styles.tabBar, { backgroundColor: dynamicStyles.tabBarBg }]}>
-          <TouchableOpacity
-            style={[styles.tabButton, activeTab === 'details' && [styles.activeTabButton, { backgroundColor: dynamicStyles.activeTabBg }]]}
-            onPress={() => setActiveTab('details')}
-            activeOpacity={0.8}
-          >
-            <Text style={[styles.tabButtonText, { color: activeTab === 'details' ? '#2563EB' : dynamicStyles.labelColor }]}>Job Details</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.tabButton, activeTab === 'company' && [styles.activeTabButton, { backgroundColor: dynamicStyles.activeTabBg }]]}
-            onPress={() => setActiveTab('company')}
-            activeOpacity={0.8}
-          >
-            <Text style={[styles.tabButtonText, { color: activeTab === 'company' ? '#2563EB' : dynamicStyles.labelColor }]}>Company</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.tabButton, activeTab === 'reviews' && [styles.activeTabButton, { backgroundColor: dynamicStyles.activeTabBg }]]}
-            onPress={() => setActiveTab('reviews')}
-            activeOpacity={0.8}
-          >
-            <View style={styles.tabWithBadgeRow}>
-              <Text style={[styles.tabButtonText, { color: activeTab === 'reviews' ? '#2563EB' : dynamicStyles.labelColor }]}>Reviews</Text>
-              <View style={[styles.reviewBadge, { backgroundColor: activeTab === 'reviews' ? '#2563EB' : dynamicStyles.labelColor }]}>
-                <Text style={styles.reviewBadgeText}>128</Text>
+          {/* Card 2: Key Responsibilities */}
+          <View style={[styles.contentCard, { backgroundColor: dynamicStyles.cardBg, borderColor: dynamicStyles.cardBorder }]}>
+            <View style={styles.illustrationRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.cardTitle, { color: dynamicStyles.textColor, marginBottom: 12 }]}>Key Responsibilities</Text>
+                {(jobInfo.responsibilities && jobInfo.responsibilities.length > 0
+                  ? jobInfo.responsibilities
+                  : [
+                      'Build responsive and interactive user interfaces using modern framework libraries',
+                      'Develop reusable components and front-end libraries',
+                      'Optimize components for maximum performance',
+                      'Collaborate with designers and backend developers',
+                      'Ensure technical feasibility of UI/UX designs',
+                    ]
+                ).map((item: string, idx: number) => (
+                  <View key={idx} style={styles.bulletRow}>
+                    <View style={styles.bulletDot} />
+                    <Text style={[styles.bulletText, { color: dynamicStyles.labelColor }]}>{item}</Text>
+                  </View>
+                ))}
+              </View>
+              <View style={styles.illustrationWrapper}>
+                <ClipboardIllustration />
               </View>
             </View>
-          </TouchableOpacity>
+          </View>
 
-          <TouchableOpacity
-            style={[styles.tabButton, activeTab === 'similar' && [styles.activeTabButton, { backgroundColor: dynamicStyles.activeTabBg }]]}
-            onPress={() => setActiveTab('similar')}
-            activeOpacity={0.8}
-          >
-            <Text style={[styles.tabButtonText, { color: activeTab === 'similar' ? '#2563EB' : dynamicStyles.labelColor }]}>Similar Jobs</Text>
-          </TouchableOpacity>
+          {/* Card 3: Requirements */}
+          <View style={[styles.contentCard, { backgroundColor: dynamicStyles.cardBg, borderColor: dynamicStyles.cardBorder }]}>
+            <View style={styles.illustrationRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.cardTitle, { color: dynamicStyles.textColor, marginBottom: 12 }]}>Key Skills & Requirements</Text>
+                {(jobInfo.skills && jobInfo.skills.length > 0
+                  ? jobInfo.skills
+                  : [
+                      '2-4 years of experience in frontend development',
+                      'Strong knowledge of HTML, CSS, JavaScript, React.js',
+                      'Experience with state management (Redux/Context API)',
+                      'Familiarity with REST APIs and version control (Git)',
+                      'Good problem-solving and communication skills',
+                    ]
+                ).map((item: string, idx: number) => (
+                  <View key={idx} style={styles.bulletRow}>
+                    <View style={styles.bulletDot} />
+                    <Text style={[styles.bulletText, { color: dynamicStyles.labelColor }]}>{item}</Text>
+                  </View>
+                ))}
+              </View>
+              <View style={styles.illustrationWrapper}>
+                <TargetIllustration />
+              </View>
+            </View>
+          </View>
+
+          {/* Card 4: Additional Information */}
+          <View style={[styles.contentCard, { backgroundColor: dynamicStyles.cardBg, borderColor: dynamicStyles.cardBorder }]}>
+            <Text style={[styles.cardTitle, { color: dynamicStyles.textColor, marginBottom: 16 }]}>Additional Information</Text>
+            
+            <View style={styles.additionalGrid}>
+              {/* Item 1 */}
+              <View style={styles.gridItem}>
+                <View style={[styles.gridIconCircle, { backgroundColor: dynamicStyles.iconCircleBg }]}>
+                  <BriefcaseIcon color="#2563EB" />
+                </View>
+                <View style={styles.gridDetails}>
+                  <Text style={[styles.gridLabel, { color: dynamicStyles.subLabelColor }]}>Job Type</Text>
+                  <Text style={[styles.gridValue, { color: dynamicStyles.textColor }]}>
+                    {jobInfo.type || jobInfo.jobType || "Full Time"}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Item 2 */}
+              <View style={styles.gridItem}>
+                <View style={[styles.gridIconCircle, { backgroundColor: dynamicStyles.iconCircleBg }]}>
+                  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+                    <Circle cx="12" cy="12" r="9" stroke="#2563EB" strokeWidth="2" />
+                    <Path d="M12 7v5l3 2" stroke="#2563EB" strokeWidth="2" strokeLinecap="round" />
+                  </Svg>
+                </View>
+                <View style={styles.gridDetails}>
+                  <Text style={[styles.gridLabel, { color: dynamicStyles.subLabelColor }]}>Experience</Text>
+                  <Text style={[styles.gridValue, { color: dynamicStyles.textColor }]}>
+                    {jobInfo.experience || jobInfo.experienceLevel || "2-4 Years"}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Item 3 */}
+              <View style={styles.gridItem}>
+                <View style={[styles.gridIconCircle, { backgroundColor: dynamicStyles.iconCircleBg }]}>
+                  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+                    <Rect x="4" y="4" width="16" height="16" rx="2" stroke="#2563EB" strokeWidth="2" />
+                    <Path d="M9 4v16M15 4v16M4 10h16M4 15h16" stroke="#2563EB" strokeWidth="2" />
+                  </Svg>
+                </View>
+                <View style={styles.gridDetails}>
+                  <Text style={[styles.gridLabel, { color: dynamicStyles.subLabelColor }]}>Department</Text>
+                  <Text style={[styles.gridValue, { color: dynamicStyles.textColor }]}>
+                    {jobInfo.department || "Engineering"}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Item 4 */}
+              <View style={styles.gridItem}>
+                <View style={[styles.gridIconCircle, { backgroundColor: dynamicStyles.iconCircleBg }]}>
+                  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+                    <Path d="M22 10L12 5 2 10l10 5 10-5z" stroke="#2563EB" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    <Path d="M6 12v5c0 2 3 3 6 3s6-1 6-3v-5" stroke="#2563EB" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </Svg>
+                </View>
+                <View style={styles.gridDetails}>
+                  <Text style={[styles.gridLabel, { color: dynamicStyles.subLabelColor }]}>Openings</Text>
+                  <Text style={[styles.gridValue, { color: dynamicStyles.textColor }]}>
+                    {jobInfo.openings !== undefined ? `${jobInfo.openings} Position(s)` : "1 Position"}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          </View>
         </View>
-
-        {/* Tab Content */}
-        {/* Tab Content */}
-        {activeTab === 'details' && (
-          <View>
-            {/* Card 1: About the Role */}
-            <View style={[styles.contentCard, { backgroundColor: dynamicStyles.cardBg, borderColor: dynamicStyles.cardBorder }]}>
-              <Text style={[styles.cardTitle, { color: dynamicStyles.textColor }]}>About the Role</Text>
-              <Text style={[styles.cardDescriptionText, { color: dynamicStyles.labelColor }]}>
-                {jobInfo.description || "We are looking for a skilled Frontend Developer to join our team and build amazing user experiences. You will work on building responsive web applications and collaborate with cross-functional teams."}
-              </Text>
-            </View>
-
-            {/* Card 2: Key Responsibilities */}
-            <View style={[styles.contentCard, { backgroundColor: dynamicStyles.cardBg, borderColor: dynamicStyles.cardBorder }]}>
-              <View style={styles.illustrationRow}>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.cardTitle, { color: dynamicStyles.textColor, marginBottom: 12 }]}>Key Responsibilities</Text>
-                  {(jobInfo.responsibilities && jobInfo.responsibilities.length > 0
-                    ? jobInfo.responsibilities
-                    : [
-                        'Build responsive and interactive user interfaces using modern framework libraries',
-                        'Develop reusable components and front-end libraries',
-                        'Optimize components for maximum performance',
-                        'Collaborate with designers and backend developers',
-                        'Ensure technical feasibility of UI/UX designs',
-                      ]
-                  ).map((item: string, idx: number) => (
-                    <View key={idx} style={styles.bulletRow}>
-                      <View style={styles.bulletDot} />
-                      <Text style={[styles.bulletText, { color: dynamicStyles.labelColor }]}>{item}</Text>
-                    </View>
-                  ))}
-                </View>
-                <View style={styles.illustrationWrapper}>
-                  <ClipboardIllustration />
-                </View>
-              </View>
-            </View>
-
-            {/* Card 3: Requirements */}
-            <View style={[styles.contentCard, { backgroundColor: dynamicStyles.cardBg, borderColor: dynamicStyles.cardBorder }]}>
-              <View style={styles.illustrationRow}>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.cardTitle, { color: dynamicStyles.textColor, marginBottom: 12 }]}>Key Skills & Requirements</Text>
-                  {(jobInfo.skills && jobInfo.skills.length > 0
-                    ? jobInfo.skills
-                    : [
-                        '2-4 years of experience in frontend development',
-                        'Strong knowledge of HTML, CSS, JavaScript, React.js',
-                        'Experience with state management (Redux/Context API)',
-                        'Familiarity with REST APIs and version control (Git)',
-                        'Good problem-solving and communication skills',
-                      ]
-                  ).map((item: string, idx: number) => (
-                    <View key={idx} style={styles.bulletRow}>
-                      <View style={styles.bulletDot} />
-                      <Text style={[styles.bulletText, { color: dynamicStyles.labelColor }]}>{item}</Text>
-                    </View>
-                  ))}
-                </View>
-                <View style={styles.illustrationWrapper}>
-                  <TargetIllustration />
-                </View>
-              </View>
-            </View>
-
-            {/* Card 4: Additional Information */}
-            <View style={[styles.contentCard, { backgroundColor: dynamicStyles.cardBg, borderColor: dynamicStyles.cardBorder }]}>
-              <Text style={[styles.cardTitle, { color: dynamicStyles.textColor, marginBottom: 16 }]}>Additional Information</Text>
-              
-              <View style={styles.additionalGrid}>
-                {/* Item 1 */}
-                <View style={styles.gridItem}>
-                  <View style={[styles.gridIconCircle, { backgroundColor: dynamicStyles.iconCircleBg }]}>
-                    <BriefcaseIcon color="#2563EB" />
-                  </View>
-                  <View style={styles.gridDetails}>
-                    <Text style={[styles.gridLabel, { color: dynamicStyles.subLabelColor }]}>Job Type</Text>
-                    <Text style={[styles.gridValue, { color: dynamicStyles.textColor }]}>
-                      {jobInfo.type || jobInfo.jobType || "Full Time"}
-                    </Text>
-                  </View>
-                </View>
-
-                {/* Item 2 */}
-                <View style={styles.gridItem}>
-                  <View style={[styles.gridIconCircle, { backgroundColor: dynamicStyles.iconCircleBg }]}>
-                    <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
-                      <Circle cx="12" cy="12" r="9" stroke="#2563EB" strokeWidth="2" />
-                      <Path d="M12 7v5l3 2" stroke="#2563EB" strokeWidth="2" strokeLinecap="round" />
-                    </Svg>
-                  </View>
-                  <View style={styles.gridDetails}>
-                    <Text style={[styles.gridLabel, { color: dynamicStyles.subLabelColor }]}>Experience</Text>
-                    <Text style={[styles.gridValue, { color: dynamicStyles.textColor }]}>
-                      {jobInfo.experience || jobInfo.experienceLevel || "2-4 Years"}
-                    </Text>
-                  </View>
-                </View>
-
-                {/* Item 3 */}
-                <View style={styles.gridItem}>
-                  <View style={[styles.gridIconCircle, { backgroundColor: dynamicStyles.iconCircleBg }]}>
-                    <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
-                      <Rect x="4" y="4" width="16" height="16" rx="2" stroke="#2563EB" strokeWidth="2" />
-                      <Path d="M9 4v16M15 4v16M4 10h16M4 15h16" stroke="#2563EB" strokeWidth="2" />
-                    </Svg>
-                  </View>
-                  <View style={styles.gridDetails}>
-                    <Text style={[styles.gridLabel, { color: dynamicStyles.subLabelColor }]}>Department</Text>
-                    <Text style={[styles.gridValue, { color: dynamicStyles.textColor }]}>
-                      {jobInfo.department || "Engineering"}
-                    </Text>
-                  </View>
-                </View>
-
-                {/* Item 4 */}
-                <View style={styles.gridItem}>
-                  <View style={[styles.gridIconCircle, { backgroundColor: dynamicStyles.iconCircleBg }]}>
-                    <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
-                      <Path d="M22 10L12 5 2 10l10 5 10-5z" stroke="#2563EB" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                      <Path d="M6 12v5c0 2 3 3 6 3s6-1 6-3v-5" stroke="#2563EB" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                    </Svg>
-                  </View>
-                  <View style={styles.gridDetails}>
-                    <Text style={[styles.gridLabel, { color: dynamicStyles.subLabelColor }]}>Openings</Text>
-                    <Text style={[styles.gridValue, { color: dynamicStyles.textColor }]}>
-                      {jobInfo.openings !== undefined ? `${jobInfo.openings} Position(s)` : "1 Position"}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-            </View>
-          </View>
-        )}
-
-        {activeTab === 'company' && (
-          <View style={[styles.contentCard, { backgroundColor: dynamicStyles.cardBg, borderColor: dynamicStyles.cardBorder }]}>
-            <Text style={[styles.cardTitle, { color: dynamicStyles.textColor }]}>About {jobInfo.company}</Text>
-            <Text style={[styles.cardDescriptionText, { color: dynamicStyles.labelColor }]}>
-              {jobInfo.companyId?.about || jobInfo.companyId?.description || `${jobInfo.company} is a leading digital services provider specializing in state of the art web and mobile application engineering. We offer remote-first working opportunities and a highly collaborative team workspace.`}
-            </Text>
-          </View>
-        )}
-
-        {activeTab === 'reviews' && (
-          <View style={[styles.contentCard, { backgroundColor: dynamicStyles.cardBg, borderColor: dynamicStyles.cardBorder }]}>
-            <Text style={[styles.cardTitle, { color: dynamicStyles.textColor, marginBottom: 12 }]}>Team Reviews</Text>
-            <Text style={[styles.cardDescriptionText, { color: dynamicStyles.labelColor }]}>
-              "{jobInfo.company} has built a highly supportive engineering environment. The processes are transparent and leadership actively supports personal growth." - Staff Developer
-            </Text>
-          </View>
-        )}
-
-        {activeTab === 'similar' && (
-          <View style={[styles.contentCard, { backgroundColor: dynamicStyles.cardBg, borderColor: dynamicStyles.cardBorder }]}>
-            <Text style={[styles.cardTitle, { color: dynamicStyles.textColor }]}>Similar Opportunities</Text>
-            <Text style={[styles.cardDescriptionText, { color: dynamicStyles.labelColor, marginTop: 8 }]}>
-              • Senior React Engineer at AmplifyAvenue (Remote)
-              {"\n"}• React Native Developer at CapitalFlow Co (On-site)
-            </Text>
-          </View>
-        )}
       </ScrollView>
 
       {/* Sticky Bottom Actions Bar */}

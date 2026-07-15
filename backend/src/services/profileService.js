@@ -1,23 +1,45 @@
 const Profile = require("../models/Profile");
 const Candidate = require("../models/Candidate");
 
+const checkProfileCompletion = (profile, candidate) => {
+  const missingFields = [];
+
+  // 1. Skills
+  const skills = profile ? profile.skills : [];
+  if (!skills || skills.length === 0) missingFields.push("skills");
+
+  // 2. Experience
+  const exp = profile ? profile.experience : [];
+  if (!exp || exp.length === 0) missingFields.push("experience");
+
+  // 3. Preferred job role
+  const prefRole = profile ? (profile.job_preferences?.role || profile.position || (profile.preferredRoles && profile.preferredRoles[0])) : "";
+  if (!prefRole || prefRole.trim() === "") missingFields.push("preferredJobRole");
+
+  // 4. Current location
+  const loc = profile ? profile.location : "";
+  if (!loc || loc.trim() === "") missingFields.push("location");
+
+  // 5. Education
+  const edu = profile ? profile.education : [];
+  if (!edu || edu.length === 0) missingFields.push("education");
+
+  // 6. Resume
+  const resume = profile ? (profile.resumeUrl || profile.resumePublicId) : "";
+  if (!resume || resume.trim() === "") missingFields.push("resume");
+
+  const completedCount = 6 - missingFields.length;
+  const profileCompletion = Math.round((completedCount / 6) * 100);
+
+  return {
+    isProfileComplete: missingFields.length === 0,
+    missingFields,
+    profileCompletion
+  };
+};
+
 const calculateCompletion = (profile) => {
-  const fields = [
-    "profileImage", "headline", "location", "about", "skills", "resumeUrl"
-  ];
-  let filledCount = 0;
-
-  fields.forEach(f => {
-    if (Array.isArray(profile[f]) ? profile[f].length > 0 : (profile[f] && profile[f].toString().trim() !== "")) {
-      filledCount++;
-    }
-  });
-
-  if (profile.education?.length > 0) filledCount++;
-  if (profile.experience?.length > 0 || profile.projects?.length > 0) filledCount++;
-
-  const totalPossible = fields.length + 2;
-  return Math.round((filledCount / totalPossible) * 100);
+  return checkProfileCompletion(profile, null).profileCompletion;
 };
 
 const { generateSignedUrl } = require("./fileStorage.service");
@@ -37,9 +59,13 @@ const getProfileByUserId = async (userId) => {
     const candidate = await Candidate.findById(userId)
       .select("firstName lastName email phone company_id is_employer")
       .populate("company_id", "status name verification_status rejectionReason official_work_email contact_person_name mobile_number company_location website_url about_company industry company_size gst_number cin_number pan_number logo");
+    const completionInfo = checkProfileCompletion(null, candidate);
     return {
       profile: { userId: candidate, userType: "fresher", skills: [], education: [], experience: [], projects: [] },
-      completionPercentage: 0
+      completionPercentage: completionInfo.profileCompletion,
+      profileCompletion: completionInfo.profileCompletion,
+      isProfileComplete: completionInfo.isProfileComplete,
+      missingFields: completionInfo.missingFields
     };
   }
 
@@ -48,9 +74,13 @@ const getProfileByUserId = async (userId) => {
     profile.resumeUrl = generateSignedUrl(profile.resumePublicId);
   }
 
+  const completionInfo = checkProfileCompletion(profile, null);
   return {
     profile,
-    completionPercentage: calculateCompletion(profile)
+    completionPercentage: completionInfo.profileCompletion,
+    profileCompletion: completionInfo.profileCompletion,
+    isProfileComplete: completionInfo.isProfileComplete,
+    missingFields: completionInfo.missingFields
   };
 };
 

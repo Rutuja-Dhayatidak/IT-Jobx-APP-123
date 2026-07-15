@@ -16,12 +16,15 @@ import {
   Linking,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
+import { Alert } from 'react-native';
 import BottomNavigation from '../components/BottomNavigation';
 import FadeInView from '../components/FadeInView';
 import SuggestedJobsSection from '../components/home/SuggestedJobsSection';
 import { getSuggestedJobs, SuggestedJob } from '../services/suggestedJobsApi';
 import { viewProfileService } from '../services/viewProfile';
 import { apiRequest } from '../services/api';
+import ProfileCompletionBanner from '../components/home/ProfileCompletionBanner';
+import { useAuth } from '../hooks/useAuth';
 
 const { width } = Dimensions.get('window');
 
@@ -41,6 +44,7 @@ interface HomeProps {
   onLocationChange?: (location: string) => void;
   savedJobs?: any[];
   onToggleSave?: (job: any) => void;
+  onCompleteProfilePress?: (missingFields: string[]) => void;
 }
 
 const GoogleLogo = () => (
@@ -145,7 +149,9 @@ export default function Home({
   onLocationChange,
   savedJobs = [],
   onToggleSave,
+  onCompleteProfilePress,
 }: HomeProps) {
+  const { isAuthenticated, user: authUser, accessToken: token } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
   const [customLocation, setCustomLocation] = useState(userLocation || '');
@@ -156,6 +162,76 @@ export default function Home({
   const [candidateName, setCandidateName] = useState('Rutuja');
   const [profileImage, setProfileImage] = useState('');
   const [recentJobsList, setRecentJobsList] = useState<any[]>([]);
+
+  // Profile completion states
+  const [showBanner, setShowBanner] = useState(false);
+  const [completionPercent, setCompletionPercent] = useState(0);
+  const [missingFields, setMissingFields] = useState<string[]>([]);
+
+  const checkCompletionStatus = async () => {
+    try {
+      if (!token) {
+        setShowBanner(false);
+        return;
+      }
+
+      const res = await apiRequest('/profile/me', { method: 'GET' });
+      if (res && res.success) {
+        const percent = res.profileCompletion ?? 0;
+        const missing = res.missingFields || [];
+        const isComplete = res.isProfileComplete;
+
+        setCompletionPercent(percent);
+        setMissingFields(missing);
+
+        const wasCompleteStored = await AsyncStorage.getItem('profileWasComplete');
+        if (isComplete) {
+          if (wasCompleteStored === 'false' || wasCompleteStored === null) {
+            await AsyncStorage.setItem('profileWasComplete', 'true');
+            Alert.alert(
+              'Profile Complete 🎉',
+              'Your profile is complete. We can now recommend better jobs for you.'
+            );
+            await fetchSuggested();
+          } else {
+            await AsyncStorage.setItem('profileWasComplete', 'true');
+          }
+          setShowBanner(false);
+          return;
+        } else {
+          await AsyncStorage.setItem('profileWasComplete', 'false');
+        }
+
+        const dismissedAtStr = await AsyncStorage.getItem('profileBannerDismissedAt');
+        if (dismissedAtStr) {
+          const dismissedAt = parseInt(dismissedAtStr, 10);
+          if (Date.now() - dismissedAt < 24 * 60 * 60 * 1000) {
+            setShowBanner(false);
+            return;
+          }
+        }
+
+        setShowBanner(true);
+      }
+    } catch (err) {
+      console.warn('Failed to load profile completion status:', err);
+    }
+  };
+
+  const handleDismissBanner = async () => {
+    setShowBanner(false);
+    try {
+      await AsyncStorage.setItem('profileBannerDismissedAt', Date.now().toString());
+    } catch (err) {
+      console.warn('Error saving dismissed timestamp:', err);
+    }
+  };
+
+  const handleCompleteProfile = () => {
+    if (onCompleteProfilePress) {
+      onCompleteProfilePress(missingFields);
+    }
+  };
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -172,7 +248,6 @@ export default function Home({
     try {
       setLoadingSuggested(true);
       setSuggestedError(null);
-      const token = await AsyncStorage.getItem('authToken');
       if (!token) {
         // Fallback to public published jobs for guest users
         const res = await apiRequest('/jobs/published', { method: 'GET' });
@@ -210,26 +285,23 @@ export default function Home({
   useEffect(() => {
     fetchSuggested();
     fetchRecentJobs();
+    checkCompletionStatus();
 
     const loadUser = async () => {
       try {
-        const token = await AsyncStorage.getItem('authToken');
-        if (!token) {
+        if (!isAuthenticated || !token) {
           setCandidateName('Guest User');
+          setProfileImage('');
           return;
         }
 
-        const savedUser = await AsyncStorage.getItem('user');
-        if (savedUser) {
-          const parsed = JSON.parse(savedUser);
-          if (parsed) {
-            let fullName = parsed.name || '';
-            if (!fullName && parsed.firstName) {
-              fullName = parsed.firstName + (parsed.lastName ? ' ' + parsed.lastName : '');
-            }
-            if (fullName) {
-              setCandidateName(fullName);
-            }
+        if (authUser) {
+          let fullName = authUser.name || '';
+          if (!fullName && authUser.firstName) {
+            fullName = authUser.firstName + (authUser.lastName ? ' ' + authUser.lastName : '');
+          }
+          if (fullName) {
+            setCandidateName(fullName);
           }
         }
 
@@ -254,13 +326,10 @@ export default function Home({
         }
       } catch (err: any) {
         console.error('Error loading user in Home:', err);
-        await AsyncStorage.removeItem('authToken');
-        await AsyncStorage.removeItem('token');
-        setCandidateName('Guest User');
       }
     };
     loadUser();
-  }, []);
+  }, [isAuthenticated, token, authUser]);
 
   useEffect(() => {
     setCustomLocation(userLocation || '');
@@ -308,7 +377,7 @@ export default function Home({
   }, [fadeAnim, translateYHeader, translateYContent, translateYRecent]);
 
   // Dummy categories
-  const categories = ['All', 'Accountant', 'BDM', 'Content Writer', 'Developer', 'Designer'];
+  const categories = ['All', 'Content Writer', 'Developer', 'Designer'];
 
   // Dummy suggested jobs data
   const suggestedJobs = [
@@ -610,6 +679,16 @@ export default function Home({
             </View>
           </Animated.View>
 
+          {showBanner && (
+            <ProfileCompletionBanner
+              percentage={completionPercent}
+              missingFields={missingFields}
+              onComplete={handleCompleteProfile}
+              onDismiss={handleDismissBanner}
+              isDarkTheme={isDarkTheme}
+            />
+          )}
+
           {/* Suggested Jobs Section */}
           <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: translateYContent }] }}>
             <SuggestedJobsSection
@@ -730,39 +809,6 @@ export default function Home({
               </TouchableOpacity>
             </View>
 
-            {/* Category Pill Selectors */}
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.categoriesContainer}
-            >
-              {categories.map((cat) => {
-                const isActive = activeCategory === cat;
-                return (
-                  <TouchableOpacity
-                    key={cat}
-                    style={[
-                      styles.categoryPill,
-                      { backgroundColor: dynamicStyles.pillBg, borderColor: dynamicStyles.pillBorder },
-                      isActive && styles.categoryPillActive,
-                    ]}
-                    onPress={() => setActiveCategory(cat)}
-                    activeOpacity={0.7}
-                  >
-                    <Text
-                      style={[
-                        styles.categoryPillText,
-                        { color: dynamicStyles.pillText },
-                        isActive && styles.categoryPillTextActive,
-                      ]}
-                    >
-                      {cat}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-
             {/* Recent Jobs List */}
             <View style={styles.recentJobsContainer}>
               {recentJobsList.map((job) => {
@@ -779,6 +825,7 @@ export default function Home({
                     : 'Competitive';
 
                 const isSaved = savedJobs.some((j: any) => (j._id || j.id) === (job._id || job.id));
+                const logoUri = job.companyId?.logo || '';
 
                 return (
                   <TouchableOpacity
@@ -788,8 +835,16 @@ export default function Home({
                     activeOpacity={0.9}
                   >
                     <View style={styles.recentJobHeader}>
-                      <View style={[styles.recentCompanyLogo, { backgroundColor: logoBg }]}>
-                        <Text style={styles.recentCompanyLogoText}>{companyInitial}</Text>
+                      <View style={[styles.recentCompanyLogo, { backgroundColor: logoBg, overflow: 'hidden' }]}>
+                        {logoUri ? (
+                          <Image 
+                            source={{ uri: logoUri }} 
+                            style={{ width: '100%', height: '100%' }} 
+                            resizeMode="cover"
+                          />
+                        ) : (
+                          <Text style={styles.recentCompanyLogoText}>{companyInitial}</Text>
+                        )}
                       </View>
                       <View style={styles.recentJobInfo}>
                         <Text style={[styles.recentJobTitle, { color: dynamicStyles.textColor }]} numberOfLines={1}>{job.title}</Text>
@@ -821,7 +876,7 @@ export default function Home({
                     </View>
 
                     <View style={styles.recentJobFooter}>
-                      <Text style={styles.recentLocation}>📍 {job.location || 'Pune'}</Text>
+                      <Text style={styles.recentLocation}>📍 {job.location || 'Pune'}  •  👥 {job.applyCount || 0} Applicants</Text>
                       <Text style={styles.recentSalary}>{salaryText}</Text>
                     </View>
                   </TouchableOpacity>
