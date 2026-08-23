@@ -1,0 +1,73 @@
+name: CI/CD Pipeline - Deploy to VPS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  test:
+    name: Run Backend Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install Backend Dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Run Backend Tests
+        working-directory: backend
+        env:
+          NODE_ENV: test
+        run: npm test --if-present
+
+  deploy:
+    name: Deploy to VPS (187.127.132.81)
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST || '187.127.132.81' }}
+          username: ${{ secrets.VPS_USERNAME || 'root' }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            set -e
+            DEPLOY_DIR="/var/www/itjobx"
+            
+            # Create deployment directory if it doesn't exist
+            if [ ! -d "$DEPLOY_DIR" ]; then
+              echo "Creating deployment directory at $DEPLOY_DIR..."
+              mkdir -p "$DEPLOY_DIR"
+              git clone https://github.com/Rutuja-Dhayatidak/IT-Jobx-APP-123.git "$DEPLOY_DIR"
+            fi
+
+            cd "$DEPLOY_DIR"
+            echo "Pulling latest code from origin main..."
+            git fetch origin main
+            git reset --hard origin/main
+
+            # Ensure .env exists
+            if [ ! -f "backend/.env" ]; then
+              echo "WARNING: backend/.env was not found. Please create backend/.env on VPS."
+            fi
+
+            echo "Building and restarting Docker containers..."
+            docker compose build backend
+            docker compose up -d
+
+            echo "Cleaning up dangling Docker images..."
+            docker image prune -f
+
+            echo "Deployment completed successfully! Live at https://app.itjobx.com"

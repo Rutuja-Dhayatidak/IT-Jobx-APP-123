@@ -1,0 +1,51 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: itjobx-backend
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    environment:
+      - NODE_ENV=production
+      - PORT=5000
+    volumes:
+      - backend_uploads:/app/uploads
+    networks:
+      - itjobx-network
+    expose:
+      - "5000"
+
+  nginx:
+    image: nginx:alpine
+    container_name: itjobx-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+      - ./certbot/www:/var/www/certbot:ro
+    depends_on:
+      - backend
+    networks:
+      - itjobx-network
+
+  certbot:
+    image: certbot/certbot:latest
+    container_name: itjobx-certbot
+    restart: unless-stopped
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12d & wait $${!}; done;'"
+
+volumes:
+  backend_uploads:
+    driver: local
+
+networks:
+  itjobx-network:
+    driver: bridge

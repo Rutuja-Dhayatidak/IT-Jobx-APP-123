@@ -1,0 +1,29 @@
+# Environment variables
+.env
+.env.*
+!.env.example
+backend/.env
+
+# Node modules
+node_modules/
+backend/node_modules/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Certbot local files
+certbot/conf/
+certbot/www/
+
+# Android build cache
+ITJobx/android/app/.cxx/
+ITJobx/android/app/build/
+ITJobx/android/.gradle/
+ITJobx/android/build/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
